@@ -38,7 +38,7 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Build for tvOS Simulator
+      - name: Build app and tests for tvOS Simulator
         run: |
           xcodebuild \
             -project Velyra.xcodeproj \
@@ -46,4 +46,4 @@ jobs:
             -sdk appletvsimulator \
             -destination 'generic/platform=tvOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
-            build
+            build-for-testing

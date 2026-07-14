@@ -6,7 +6,7 @@
 - [x] GitFlow branch strategy
 - [x] SwiftUI tvOS shell
 - [x] Liquid Glass abstraction with legacy fallback
-- [x] Cinematic onboarding architecture
+- [x] One-screen automatic cinematic onboarding
 - [x] Silent looping background-video component
 - [x] Multi-language String Catalog foundation
 - [x] iCloud preference store and account status
@@ -52,15 +52,15 @@
 
 ## Phase 4 — Playback quality
 
-- [ ] Source/container inspection
-- [ ] HLS and MP4 direct playback
-- [ ] Multi-audio and subtitle tracks
+- [x] Initial source/container ranking and AVFoundation playability check
+- [x] Native AVPlayerViewController path for HLS and MP4
+- [x] Automatic embedded audio/subtitle selection and player switching
 - [ ] External subtitles
 - [ ] Frame-rate and dynamic-range matching tests
 - [ ] Dolby Vision profile matrix
 - [ ] Dolby Atmos format matrix
 - [ ] Fallback/remux architecture
-- [ ] Player diagnostics
+- [ ] Player diagnostics and user-safe technical report
 
 ## Phase 5 — Distribution
 
