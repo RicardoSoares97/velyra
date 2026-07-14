@@ -1,51 +1,78 @@
 # Velyra
 
-Velyra is a premium, TV-first media client for Apple TV, focused on a native tvOS experience, addon-based discovery, Trakt synchronisation, and high-quality playback.
+Velyra is a native, cinematic media client for Apple TV. It combines an Apple-first tvOS experience with addon-based discovery, complete Trakt integration, iCloud preference synchronisation and accessible playback.
 
-> Status: initial architecture and tvOS proof of concept.
+> Current status: product architecture and interactive tvOS foundation. The project has not yet been compiled on macOS/Xcode.
 
 ## Product principles
 
-- Native Apple TV interaction with excellent focus behaviour.
-- AVPlayer-first playback for the best tvOS integration.
-- Dolby Vision and Dolby Atmos when the source and device chain are compatible.
-- Addon-based catalogues and stream resolution using user-configured services.
-- Trakt device authentication, history, watchlist and scrobbling.
-- Light and dark themes built around Velyra Orange `#DD571C`.
-- No bundled or hosted media content.
+- Native SwiftUI and AVKit experience designed for the Siri Remote.
+- Liquid Glass on tvOS 26+, with accessible material fallbacks on tvOS 17–25.
+- Cinematic, silent background loops with restrained blur and strong readability overlays.
+- No separate Velyra login: iCloud uses the Apple ID already configured on the device.
+- Trakt device authentication, watchlist, history, progress and scrobbling.
+- HTTP/JSON addons for authorised catalogues, metadata, streams and subtitles.
+- Multi-language interface: English, Portuguese (Portugal), Spanish and French from the first foundation.
+- Accessibility, focus restoration and reduced-motion behaviour treated as core requirements.
+- No bundled, hosted or promoted media content.
 
 ## Technology
 
 - Swift 6
 - SwiftUI
 - tvOS 17+
+- Liquid Glass APIs on tvOS 26+
 - AVFoundation / AVKit
+- CloudKit and iCloud key-value storage
+- Keychain Services
 - URLSession
-- XcodeGen for reproducible Xcode project generation
+- String Catalogs (`.xcstrings`)
+- XcodeGen
 
-## Repository structure
+## Architecture
 
 ```text
 VelyraTV/
-├── App/
+├── App/                         # App lifecycle, root state and routing
 ├── Core/
-│   ├── DesignSystem/
-│   └── Networking/
+│   ├── Accessibility/           # Reduced motion and accessible interaction
+│   ├── DesignSystem/            # Colour, glass, focus and control tokens
+│   ├── Localization/            # Runtime language selection
+│   ├── Media/                   # Silent looping background video
+│   ├── Networking/              # Shared HTTP layer
+│   ├── Persistence/             # Local and iCloud preferences
+│   ├── Security/                # Keychain storage
+│   └── Sync/                    # Apple ID / iCloud availability
 ├── Features/
+│   ├── Onboarding/
+│   ├── Shell/
 │   ├── Home/
-│   └── Player/
+│   ├── Search/
+│   ├── Library/
+│   ├── Addons/
+│   ├── Trakt/
+│   ├── Player/
+│   └── Settings/
 └── Resources/
-
-docs/
-├── architecture.md
-├── design-system.md
-├── legal-boundaries.md
-└── roadmap.md
+    ├── Localizable.xcstrings
+    ├── PrivacyInfo.xcprivacy
+    ├── VelyraTV.entitlements
+    └── Media/
 ```
+
+## GitFlow
+
+- `main`: App Store/TestFlight release history only.
+- `develop`: integration branch for the next release.
+- `feature/*`: isolated product work branched from `develop`.
+- `release/*`: release hardening and version preparation.
+- `hotfix/*`: urgent production fixes branched from `main`.
+
+The current design work lives on `feature/cinematic-onboarding`.
 
 ## Generate the Xcode project
 
-A Mac with Xcode is required for this step.
+A Mac with the current stable Xcode is required.
 
 ```bash
 brew install xcodegen
@@ -53,23 +80,43 @@ xcodegen generate
 open Velyra.xcodeproj
 ```
 
-## Build
+## Trakt configuration
+
+Do not commit credentials. Pass the build settings locally or through CI secrets:
 
 ```bash
 xcodebuild \
   -project Velyra.xcodeproj \
   -scheme VelyraTV \
-  -destination 'platform=tvOS Simulator,name=Apple TV' \
+  TRAKT_CLIENT_ID='...' \
+  TRAKT_CLIENT_SECRET='...' \
   build
 ```
 
+OAuth tokens are stored in Keychain and are deliberately excluded from iCloud synchronisation.
+
+## iCloud
+
+The entitlements expect this container:
+
+```text
+iCloud.pt.ricardosoares.velyra
+```
+
+Lightweight preferences are mirrored through `NSUbiquitousKeyValueStore`. The architecture reserves private CloudKit records for larger user-owned state. Velyra does not receive the Apple ID email or password.
+
+## Media assets
+
+Copyrighted series or film clips must never be committed without explicit rights. See `VelyraTV/Resources/Media/README.md` for the required background-loop names and accessibility rules.
+
 ## Branding
 
-- Product name: **Velyra**
-- Repository: `velyra`
+- Product: **Velyra**
 - Bundle identifier: `pt.ricardosoares.velyra`
+- iCloud container: `iCloud.pt.ricardosoares.velyra`
 - Primary colour: `#DD571C`
+- Origin line: **Designed in Portugal / Concebida em Portugal**
 
-## Important
+## Licensing boundary
 
-The project is currently an independent clean-room foundation. Do not copy GPL-licensed Nuvio source code into this repository until the distribution and licensing strategy is explicitly decided.
+This repository is an independent clean-room foundation. Do not copy GPL-licensed Nuvio source code into it unless the distribution and licensing strategy is deliberately changed to comply with GPLv3.

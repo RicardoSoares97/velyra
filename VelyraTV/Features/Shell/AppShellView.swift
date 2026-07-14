@@ -1,0 +1,64 @@
+import SwiftUI
+
+struct AppShellView: View {
+    @State private var selectedSection: AppSection = .home
+    @FocusState private var focusedSection: AppSection?
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            content
+                .ignoresSafeArea()
+
+            navigationBar
+                .padding(.top, 30)
+                .padding(.horizontal, 64)
+        }
+        .onAppear { focusedSection = selectedSection }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch selectedSection {
+        case .home: HomeView()
+        case .search: SearchView()
+        case .library: LibraryView()
+        case .addons: AddonsView()
+        case .settings: SettingsView()
+        }
+    }
+
+    private var navigationBar: some View {
+        HStack(spacing: 6) {
+            Text("VELYRA")
+                .font(.system(size: 24, weight: .black, design: .rounded))
+                .tracking(4)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 20)
+                .accessibilityLabel("Velyra")
+
+            ForEach(AppSection.allCases) { section in
+                Button {
+                    selectedSection = section
+                } label: {
+                    Label(LocalizedStringKey(section.titleKey), systemImage: section.systemImage)
+                        .labelStyle(.titleAndIcon)
+                        .font(.headline.weight(section == selectedSection ? .bold : .medium))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 18)
+                        .frame(minHeight: 54)
+                        .background {
+                            if section == selectedSection {
+                                Capsule().fill(VelyraTheme.primary.opacity(0.86))
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+                .focused($focusedSection, equals: section)
+                .accessibilityAddTraits(section == selectedSection ? .isSelected : [])
+            }
+        }
+        .padding(8)
+        .velyraGlass(cornerRadius: 28)
+        .accessibilityElement(children: .contain)
+    }
+}
