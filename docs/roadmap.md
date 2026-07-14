@@ -41,11 +41,11 @@
 
 ## Phase 3 — Apple-quality TV experience
 
-- [ ] Final hero and content rails
+- [x] Home hero and first dynamic content rails
 - [ ] Details screen with cinematic transition
 - [ ] Search with tvOS keyboard and voice input where available
 - [ ] Focus restoration
-- [ ] Skeleton, empty and error states
+- [x] Initial loading, preview and error states
 - [ ] Context menus
 - [ ] Top Shelf evaluation
 - [ ] Accessibility audit on hardware
@@ -70,3 +70,13 @@
 - [ ] Privacy policy
 - [ ] App Store content/legal review
 - [ ] Crash reporting with opt-in privacy controls
+
+## Sprint 1 — Home e descoberta
+
+- [x] Hero cinematográfico dinâmico.
+- [x] Continuar a ver através do Trakt.
+- [x] Tendências de filmes e séries.
+- [x] Filtros por género.
+- [x] Filtros por serviço de streaming e região.
+- [x] Velyra Top 10 regional com rotulagem transparente.
+- [ ] Cache persistente, estados vazios e modo offline degradado.

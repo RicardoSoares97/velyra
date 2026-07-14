@@ -20,6 +20,7 @@ struct AppPreferences: Codable, Equatable {
     var hasCompletedOnboarding = false
     var theme: AppThemePreference = .system
     var language: AppLanguage = .system
+    var contentRegion: String? = nil
     var iCloudSyncEnabled = true
     var backgroundVideoEnabled = true
     var autoplayPreviews = true
