@@ -1,6 +1,6 @@
 import Foundation
 
-struct TraktDeviceCode: Codable, Equatable {
+struct TraktDeviceCode: Codable, Equatable, Sendable {
     let deviceCode: String
     let userCode: String
     let verificationURL: URL
@@ -16,7 +16,7 @@ struct TraktDeviceCode: Codable, Equatable {
     }
 }
 
-struct TraktToken: Codable, Equatable {
+struct TraktToken: Codable, Equatable, Sendable {
     let accessToken: String
     let refreshToken: String
     let tokenType: String
@@ -38,33 +38,33 @@ struct TraktToken: Codable, Equatable {
     }
 }
 
-struct TraktIDs: Codable, Equatable, Hashable {
+struct TraktIDs: Codable, Equatable, Hashable, Sendable {
     let trakt: Int?
     let slug: String?
     let imdb: String?
     let tmdb: Int?
 }
 
-struct TraktMovie: Codable, Equatable, Hashable {
+struct TraktMovie: Codable, Equatable, Hashable, Sendable {
     let title: String
     let year: Int?
     let ids: TraktIDs
 }
 
-struct TraktShow: Codable, Equatable, Hashable {
+struct TraktShow: Codable, Equatable, Hashable, Sendable {
     let title: String
     let year: Int?
     let ids: TraktIDs
 }
 
-struct TraktEpisode: Codable, Equatable, Hashable {
+struct TraktEpisode: Codable, Equatable, Hashable, Sendable {
     let season: Int
     let number: Int
     let title: String?
     let ids: TraktIDs
 }
 
-struct TraktPlaybackItem: Codable, Equatable, Identifiable {
+struct TraktPlaybackItem: Codable, Equatable, Identifiable, Sendable {
     let progress: Double
     let pausedAt: Date
     let id: Int
@@ -80,13 +80,13 @@ struct TraktPlaybackItem: Codable, Equatable, Identifiable {
     }
 }
 
-enum TraktScrobbleAction: String {
+enum TraktScrobbleAction: String, Sendable {
     case start
     case pause
     case stop
 }
 
-struct TraktScrobblePayload: Encodable {
+struct TraktScrobblePayload: Encodable, Sendable {
     let movie: TraktMovie?
     let show: TraktShow?
     let episode: TraktEpisode?

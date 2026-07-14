@@ -71,7 +71,7 @@ VelyraTV/
 - `release/*`: release hardening and version preparation.
 - `hotfix/*`: urgent production fixes branched from `main`.
 
-Current feature work is isolated in GitFlow branches, including `feature/cinematic-onboarding`, `feature/home-discovery` and `feature/smart-playback-onboarding`.
+The cinematic, smart-playback and Home foundations are integrated into `develop`. New product work must branch from `develop` using `feature/*`.
 
 ## Apple platform contract
 
@@ -97,10 +97,25 @@ xcodebuild \
   -scheme VelyraTV \
   TRAKT_CLIENT_ID='...' \
   TRAKT_CLIENT_SECRET='...' \
+  TMDB_READ_ACCESS_TOKEN='...' \
   build
 ```
 
 OAuth tokens are stored in Keychain and are deliberately excluded from iCloud synchronisation.
+
+## Home and discovery
+
+The Home architecture now supports:
+
+- cinematic hero artwork and silent video fallback;
+- Trakt-powered continue watching;
+- movie and series trending rails;
+- combined genre filters;
+- streaming-service filters scoped to the device region;
+- Velyra Top 10 movie and series rails for locally available content;
+- mandatory TMDB and JustWatch attribution.
+
+`Velyra Top 10` is an editorial regional ranking, not an official cross-service audience chart. Platform-owned rankings will be identified separately when integrated.
 
 ## iCloud
 

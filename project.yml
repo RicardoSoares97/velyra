@@ -12,6 +12,7 @@ settings:
     MARKETING_VERSION: 0.1.0
     TRAKT_CLIENT_ID: ""
     TRAKT_CLIENT_SECRET: ""
+    TMDB_READ_ACCESS_TOKEN: ""
 
 schemes:
   VelyraTV:

@@ -18,6 +18,8 @@
     <string>$(TRAKT_CLIENT_ID)</string>
     <key>TRAKT_CLIENT_SECRET</key>
     <string>$(TRAKT_CLIENT_SECRET)</string>
+    <key>TMDB_READ_ACCESS_TOKEN</key>
+    <string>$(TMDB_READ_ACCESS_TOKEN)</string>
     <key>UILaunchScreen</key>
     <dict/>
     <key>UIUserInterfaceStyle</key>
