@@ -1,0 +1,30 @@
+name: tvOS Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build for tvOS Simulator
+        run: |
+          xcodebuild \
+            -project Velyra.xcodeproj \
+            -scheme VelyraTV \
+            -sdk appletvsimulator \
+            -destination 'generic/platform=tvOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
