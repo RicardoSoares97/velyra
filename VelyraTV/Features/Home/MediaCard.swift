@@ -1,50 +1,78 @@
 import SwiftUI
 
-struct MediaCard: View {
+struct MediaCardModel: Identifiable, Hashable {
+    let id = UUID()
     let title: String
     let subtitle: String
+    let progress: Double?
+}
 
-    @Environment(\.colorScheme) private var colorScheme
+struct MediaCard: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var isFocused: Bool
 
+    let model: MediaCardModel
+
     var body: some View {
-        Button(action: {}) {
+        Button {
+        } label: {
             VStack(alignment: .leading, spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(VelyraTheme.elevatedSurface(for: colorScheme))
+                ZStack(alignment: .bottomLeading) {
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    VelyraTheme.primary.opacity(0.76),
+                                    Color.indigo.opacity(0.78),
+                                    Color.black
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 330, height: 186)
+                        .overlay(alignment: .center) {
+                            Image(systemName: "play.tv.fill")
+                                .font(.system(size: 46))
+                                .foregroundStyle(.white.opacity(0.24))
+                        }
 
-                    Image(systemName: "play.rectangle.fill")
-                        .font(.system(size: 48, weight: .semibold))
-                        .foregroundStyle(VelyraTheme.primary)
+                    if let progress = model.progress {
+                        GeometryReader { proxy in
+                            Capsule()
+                                .fill(VelyraTheme.primary)
+                                .frame(width: proxy.size.width * progress, height: 6)
+                                .frame(maxHeight: .infinity, alignment: .bottom)
+                        }
+                        .frame(width: 302, height: 6)
+                        .padding(14)
+                    }
                 }
-                .frame(width: 300, height: 170)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(isFocused ? VelyraTheme.focusRing : .white.opacity(0.12), lineWidth: isFocused ? 4 : 1)
+                }
 
-                Text(title)
+                Text(model.title)
                     .font(.headline)
-                    .foregroundStyle(VelyraTheme.textPrimary(for: colorScheme))
+                    .foregroundStyle(.white)
                     .lineLimit(1)
 
-                Text(subtitle)
+                Text(model.subtitle)
                     .font(.subheadline)
-                    .foregroundStyle(VelyraTheme.textSecondary(for: colorScheme))
+                    .foregroundStyle(.white.opacity(0.62))
                     .lineLimit(1)
             }
-            .padding(14)
-            .background(VelyraTheme.surface(for: colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(
-                        isFocused ? VelyraTheme.focusRing : VelyraTheme.border(for: colorScheme),
-                        lineWidth: isFocused ? 5 : 1
-                    )
-            }
-            .scaleEffect(isFocused ? 1.07 : 1)
-            .shadow(radius: isFocused ? 22 : 4)
-            .animation(.easeOut(duration: 0.16), value: isFocused)
+            .frame(width: 330, alignment: .leading)
+            .scaleEffect(isFocused && !reduceMotion ? 1.055 : 1)
+            .shadow(color: .black.opacity(isFocused ? 0.48 : 0.16), radius: isFocused ? 28 : 10, y: 14)
         }
         .buttonStyle(.plain)
         .focused($isFocused)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(model.title)
+        .accessibilityValue(model.subtitle)
+        .accessibilityHint(Text("media.openDetails.hint"))
+        .accessibleMotion(value: isFocused)
     }
 }

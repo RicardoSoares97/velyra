@@ -2,8 +2,15 @@ name: tvOS Build
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - develop
+      - 'release/**'
+      - 'hotfix/**'
   pull_request:
+    branches:
+      - main
+      - develop
 
 jobs:
   build:
@@ -13,8 +20,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Select latest stable Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - name: Install XcodeGen
         run: brew install xcodegen
+
+      - name: Validate configuration files
+        run: |
+          plutil -lint VelyraTV/Resources/Info.plist
+          plutil -lint VelyraTV/Resources/VelyraTV.entitlements
+          plutil -lint VelyraTV/Resources/PrivacyInfo.xcprivacy
+          python3 -m json.tool VelyraTV/Resources/Localizable.xcstrings >/dev/null
 
       - name: Generate Xcode project
         run: xcodegen generate

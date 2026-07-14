@@ -2,48 +2,71 @@
 
 ## Phase 0 — Foundation
 
-- [x] Product name and repository structure
-- [x] Light and dark colour tokens
+- [x] Velyra name and brand colour
+- [x] GitFlow branch strategy
 - [x] SwiftUI tvOS shell
-- [x] Focusable media card prototype
-- [x] AVPlayer proof-of-concept view
-- [ ] Generate and validate the project on macOS/Xcode
-- [ ] Add final app icon and brand assets
+- [x] Liquid Glass abstraction with legacy fallback
+- [x] Cinematic onboarding architecture
+- [x] Silent looping background-video component
+- [x] Multi-language String Catalog foundation
+- [x] iCloud preference store and account status
+- [x] Keychain token store
+- [x] Trakt device-auth and refresh foundation
+- [x] Accessibility behaviour for motion and decorative video
+- [ ] Compile and validate with the latest stable Xcode
+- [ ] Add licensed final artwork, app icon and video loops
 
-## Phase 1 — Functional proof of concept
+## Phase 1 — Addon proof of concept
 
-- [ ] Add a remote addon by URL
-- [ ] Parse manifest and catalogue
-- [ ] Open metadata details
-- [ ] Resolve and display streams
-- [ ] Play compatible HLS/MP4 with AVPlayer
-- [ ] Add external subtitle selection
-- [ ] Implement Trakt device authentication
+- [ ] Validate addon manifest URL
+- [ ] Parse manifest and capabilities
+- [ ] Catalogue aggregation
+- [ ] Metadata details
+- [ ] Stream resolution
+- [ ] Subtitle resolution
+- [ ] Addon management and iCloud synchronisation
 
-## Phase 2 — TV experience
+## Phase 2 — Complete Trakt integration
 
-- [ ] Sidebar or top-level navigation
-- [ ] Search with tvOS keyboard
-- [ ] Continue watching
-- [ ] Watchlist and history
-- [ ] Focus restoration between screens
-- [ ] Loading, empty and error states
-- [ ] Accessibility labels and reduced motion
+- [ ] Register Velyra Trakt application credentials
+- [ ] Device activation UI testing
+- [ ] Watchlist read/write
+- [ ] History read/write
+- [ ] Collections
+- [ ] Playback progress
+- [ ] Scrobble start/pause/stop
+- [ ] Offline queue and retry
+- [ ] Rate-limit and token-expiry tests
+- [ ] Reconciliation across multiple devices
 
-## Phase 3 — Playback quality
+## Phase 3 — Apple-quality TV experience
 
-- [ ] Inspect container and codec metadata
-- [ ] Match frame rate and dynamic range testing
-- [ ] Dolby Vision test matrix
-- [ ] Dolby Atmos test matrix
+- [ ] Final hero and content rails
+- [ ] Details screen with cinematic transition
+- [ ] Search with tvOS keyboard and voice input where available
+- [ ] Focus restoration
+- [ ] Skeleton, empty and error states
+- [ ] Context menus
+- [ ] Top Shelf evaluation
+- [ ] Accessibility audit on hardware
+
+## Phase 4 — Playback quality
+
+- [ ] Source/container inspection
+- [ ] HLS and MP4 direct playback
 - [ ] Multi-audio and subtitle tracks
+- [ ] External subtitles
+- [ ] Frame-rate and dynamic-range matching tests
+- [ ] Dolby Vision profile matrix
+- [ ] Dolby Atmos format matrix
 - [ ] Fallback/remux architecture
-- [ ] Playback diagnostics screen
+- [ ] Player diagnostics
 
-## Phase 4 — Distribution
+## Phase 5 — Distribution
 
 - [ ] Apple Developer signing
-- [ ] TestFlight workflow
+- [ ] iCloud container creation
+- [ ] TestFlight delivery
 - [ ] Privacy policy
-- [ ] App Store legal and content review
-- [ ] Crash reporting with privacy controls
+- [ ] App Store content/legal review
+- [ ] Crash reporting with opt-in privacy controls

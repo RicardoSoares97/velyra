@@ -2,69 +2,59 @@
 
 ## Direction
 
-Velyra should feel cinematic, minimal and premium without imitating another streaming service. Content artwork is visually dominant; interface chrome remains restrained.
+Velyra is cinematic, calm and premium. It follows Apple platform behaviour without cloning Apple TV artwork or branding. Content occupies the visual foreground; interface chrome floats above it and disappears when not needed.
 
-The app supports both system-controlled light and dark appearances. Dark is expected to be the most common TV experience, while light remains a complete first-class theme.
+## Liquid Glass
 
-## Brand colour
+On tvOS 26 and later, Velyra uses native Liquid Glass for navigation, actions, contextual panels and transient controls. Earlier tvOS versions use a material fallback with equivalent hierarchy.
+
+Glass is not applied everywhere. It is reserved for:
+
+- top-level navigation;
+- primary and secondary actions;
+- onboarding status panels;
+- settings groups;
+- temporary player controls.
+
+Rows of artwork remain mostly opaque to preserve image quality and performance.
+
+## Cinematic backgrounds
+
+- Silent, seamless, licensed video loops.
+- Minimal blur, normally 4 pt.
+- Dark gradient overlays guarantee readable foreground text.
+- Videos stop under Reduce Motion.
+- Transparency is reduced or removed under Reduce Transparency.
+- No rapid flashes, aggressive zooms or frequent hard cuts.
+- Background video is decorative and hidden from VoiceOver.
+
+## Colour
 
 | Token | Value | Purpose |
 |---|---:|---|
-| Primary | `#DD571C` | Main actions, active navigation and brand identity |
-| Primary hover | `#F06A2D` | Optional hover/highlight state |
-| Primary pressed | `#B74413` | Pressed state |
-| Focus ring | `#FF8A55` | High-visibility tvOS focus outline |
-| On primary | `#111114` | Text and icons displayed on orange |
+| Primary | `#DD571C` | Main action and brand identity |
+| Primary hover | `#F06A2D` | Highlight |
+| Primary pressed | `#B74413` | Pressed action |
+| Focus ring | `#FF8A55` | High-visibility focus boundary |
+| On primary | `#111114` | Accessible foreground on orange |
 
-Black/dark text is deliberately used on `#DD571C`. It has stronger normal-text contrast than white.
+## Focus
 
-## Light theme
+- Every interactive element has a visible focus state.
+- Focus uses scale, depth and outline — never colour alone.
+- Artwork scale target: 1.05–1.06.
+- Focus movement is short and predictable.
+- Focus restoration is required when dismissing details or the player.
+- Lists preserve their focused item after data refreshes.
 
-| Token | Value |
-|---|---:|
-| Background | `#F7F7F8` |
-| Surface | `#FFFFFF` |
-| Elevated surface | `#EFEFF2` |
-| Primary text | `#111114` |
-| Secondary text | `#62626A` |
-| Border | `#DDDDE2` |
-| Primary container | `#FFE3D6` |
+## Responsive TV layout
 
-## Dark theme
+- Horizontal safe padding is proportional with a minimum of 72 pt.
+- Hero text is constrained to avoid overlong lines on large televisions.
+- Horizontal rails use lazy stacks.
+- Navigation and actions remain usable at overscan-safe margins.
+- Text uses system typography and supports larger accessibility sizes.
 
-| Token | Value |
-|---|---:|
-| Background | `#09090B` |
-| Surface | `#151518` |
-| Elevated surface | `#202024` |
-| Primary text | `#F7F7F8` |
-| Secondary text | `#A7A7AF` |
-| Border | `#34343A` |
-| Primary container | `#3A190D` |
+## Origin signature
 
-## Focus behaviour
-
-- Every interactive element must have an obvious focused state.
-- Cards scale between 1.05 and 1.08.
-- Use the orange focus ring instead of relying only on scale.
-- Motion should complete in approximately 160 ms.
-- Focus must not be communicated through colour alone.
-- Avoid very large scale changes that cause neighbouring rows to jump.
-
-## Typography
-
-Use the system font so text remains familiar, accessible and optimised for tvOS.
-
-- Brand wordmark: rounded, black weight, increased tracking.
-- Screen heading: large title or title.
-- Section title: title 2, bold.
-- Card title: headline.
-- Supporting information: subheadline.
-
-## Corners and spacing
-
-- Small control radius: 14 pt.
-- Card radius: 22 pt.
-- Horizontal screen padding: 72 pt.
-- Card gaps: 24–28 pt.
-- Minimum interactive control height: 54 pt.
+“Designed in Portugal” / “Concebida em Portugal” appears subtly in onboarding and About. It is never presented as a badge competing with content.

@@ -10,6 +10,8 @@ settings:
     SWIFT_VERSION: "6.0"
     CURRENT_PROJECT_VERSION: 1
     MARKETING_VERSION: 0.1.0
+    TRAKT_CLIENT_ID: ""
+    TRAKT_CLIENT_SECRET: ""
 
 schemes:
   VelyraTV:
@@ -28,22 +30,20 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: VelyraTV
+        excludes:
+          - Resources
+    resources:
+      - path: VelyraTV/Resources/Localizable.xcstrings
+      - path: VelyraTV/Resources/PrivacyInfo.xcprivacy
+      - path: VelyraTV/Resources/Media
+        excludes:
+          - README.md
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: pt.ricardosoares.velyra
         PRODUCT_NAME: Velyra
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: VelyraTV/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: VelyraTV/Resources/VelyraTV.entitlements
         CODE_SIGN_STYLE: Automatic
         ENABLE_USER_SCRIPT_SANDBOXING: YES
-    info:
-      path: VelyraTV/Resources/Info.plist
-      properties:
-        CFBundleDisplayName: Velyra
-        CFBundleName: Velyra
-        CFBundleShortVersionString: $(MARKETING_VERSION)
-        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        UILaunchScreen: {}
-        UIUserInterfaceStyle: Automatic
-        UIApplicationSceneManifest:
-          UIApplicationSupportsMultipleScenes: false
