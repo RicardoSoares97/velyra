@@ -44,6 +44,8 @@ struct VelyraPlayerView: View {
       SystemPlayerView(player: coordinator.player)
         .ignoresSafeArea()
 
+      ExternalSubtitleOverlay(controller: coordinator.externalSubtitles)
+
       topControls
 
       if showsOptions {
@@ -193,11 +195,24 @@ private struct PlayerOptionsPanel: View {
 
           if !coordinator.subtitleTracks.isEmpty {
             trackSection(
-              title: "playback.subtitles",
+              title: "playback.subtitles.embedded",
               systemImage: "captions.bubble.fill",
               tracks: coordinator.subtitleTracks,
               select: coordinator.selectSubtitles
             )
+          }
+
+          if !coordinator.externalSubtitles.tracks.isEmpty {
+            ExternalSubtitleOptions(
+              controller: coordinator.externalSubtitles,
+              select: { track in
+                Task { await coordinator.selectExternalSubtitle(track) }
+              }
+            )
+          }
+
+          if let diagnostics = coordinator.diagnostics {
+            PlaybackDiagnosticsView(diagnostics: diagnostics)
           }
         }
         .padding(34)
@@ -357,5 +372,100 @@ private struct OptionRow: View {
     }
     .scaleEffect(isFocused ? 1.025 : 1)
     .animation(.easeOut(duration: 0.14), value: isFocused)
+  }
+}
+
+
+private struct ExternalSubtitleOverlay: View {
+  @ObservedObject var controller: ExternalSubtitleController
+
+  var body: some View {
+    VStack {
+      Spacer()
+      if let text = controller.currentText {
+        Text(text)
+          .font(.system(size: 34, weight: .semibold))
+          .multilineTextAlignment(.center)
+          .foregroundStyle(.white)
+          .padding(.horizontal, 24)
+          .padding(.vertical, 12)
+          .background(.black.opacity(0.72), in: RoundedRectangle(cornerRadius: 12))
+          .shadow(radius: 6)
+          .frame(maxWidth: 1_260)
+          .accessibilityHidden(true)
+      }
+    }
+    .padding(.bottom, 92)
+    .allowsHitTesting(false)
+  }
+}
+
+private struct ExternalSubtitleOptions: View {
+  @ObservedObject var controller: ExternalSubtitleController
+  let select: (ExternalSubtitleTrack?) -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      Label("playback.subtitles.external", systemImage: "text.bubble.fill")
+        .font(.headline)
+        .foregroundStyle(.secondary)
+
+      Button { select(nil) } label: {
+        OptionRow(
+          title: String(localized: "playback.subtitles.off"),
+          subtitle: nil,
+          selected: controller.selectedTrackID == nil
+        )
+      }
+      .buttonStyle(.plain)
+
+      ForEach(controller.tracks) { track in
+        Button { select(track) } label: {
+          OptionRow(
+            title: track.displayName,
+            subtitle: track.addonName,
+            selected: controller.selectedTrackID == track.id
+          )
+        }
+        .buttonStyle(.plain)
+        .accessibilityValue(
+          controller.selectedTrackID == track.id ? Text("accessibility.selected") : Text("")
+        )
+      }
+
+      if let error = controller.errorMessage {
+        Label(error, systemImage: "exclamationmark.triangle.fill")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+    }
+  }
+}
+
+
+private struct PlaybackDiagnosticsView: View {
+  let diagnostics: PlaybackDiagnostics
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      Label("playback.diagnostics.title", systemImage: "waveform.path.ecg.rectangle")
+        .font(.headline)
+        .foregroundStyle(.secondary)
+
+      ForEach(Array(diagnostics.rows.enumerated()), id: \.offset) { _, row in
+        HStack(alignment: .firstTextBaseline) {
+          Text(row.0)
+            .foregroundStyle(.secondary)
+          Spacer()
+          Text(row.1)
+            .multilineTextAlignment(.trailing)
+        }
+        .font(.subheadline)
+      }
+
+      Text("playback.diagnostics.privacy")
+        .font(.caption)
+        .foregroundStyle(.tertiary)
+    }
   }
 }

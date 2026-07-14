@@ -71,7 +71,7 @@ VelyraTV/
 - `release/*`: release hardening and version preparation.
 - `hotfix/*`: urgent production fixes branched from `main`.
 
-The cinematic, smart-playback and Home foundations are integrated into `develop`. New product work must branch from `develop` using `feature/*`.
+The cinematic, smart-playback, Home and core media foundations are integrated into `develop`. The active product-completion work extends Trakt, Library, offline resilience, player controls and release readiness.
 
 ## Apple platform contract
 
@@ -116,6 +116,21 @@ The Home architecture now supports:
 - mandatory TMDB and JustWatch attribution.
 
 `Velyra Top 10` is an editorial regional ranking, not an official cross-service audience chart. Platform-owned rankings will be identified separately when integrated.
+
+## Core media flow
+
+The current implementation connects:
+
+```text
+Home / Search
+→ Cinematic Details
+→ Installed addon metadata and episodes
+→ Aggregated streams and subtitles
+→ Automatic Apple-compatible source ranking
+→ Native AVKit player
+```
+
+The player exposes source, audio, embedded subtitles and addon subtitles without asking users to understand codecs or containers. See `docs/core-media-experience.md`.
 
 ## iCloud
 

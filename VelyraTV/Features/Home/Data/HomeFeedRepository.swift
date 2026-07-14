@@ -4,10 +4,16 @@ import Foundation
 final class HomeFeedRepository {
     private let tmdb: TMDBAPIClient
     private let traktSession: TraktSession
+    private let cache: HomeFeedCache
 
-    init(tmdb: TMDBAPIClient = TMDBAPIClient(), traktSession: TraktSession) {
+    init(
+        tmdb: TMDBAPIClient = TMDBAPIClient(),
+        traktSession: TraktSession,
+        cache: HomeFeedCache = HomeFeedCache()
+    ) {
         self.tmdb = tmdb
         self.traktSession = traktSession
+        self.cache = cache
     }
 
     func load(language: String, region: String) async throws -> HomeFeed {
@@ -118,13 +124,19 @@ final class HomeFeedRepository {
         }
         sections.append(contentsOf: providerSections)
 
-        return HomeFeed(
+        let feed = HomeFeed(
             hero: hero,
             continueWatching: continueWatching,
             genres: genreFilters,
             providers: providers,
             sections: deduplicateAdjacent(sections, excluding: hero.id)
         )
+        await cache.save(feed, language: language, region: region)
+        return feed
+    }
+
+    func cachedFeed(language: String, region: String) async -> HomeFeed? {
+        await cache.load(language: language, region: region)
     }
 
     func loadGenre(_ genre: GenreFilter, language: String, region: String) async throws -> HomeSection {

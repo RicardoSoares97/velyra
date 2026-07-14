@@ -67,4 +67,10 @@ final class AppState: ObservableObject {
   func resetOnboarding() {
     updatePreferences { $0.hasCompletedOnboarding = false }
   }
+
+  func resetApplicationData() async {
+    await traktSession.disconnect()
+    preferences = .defaults
+    await preferencesStore.save(.defaults)
+  }
 }

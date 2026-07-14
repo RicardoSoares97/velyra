@@ -14,6 +14,19 @@ actor TMDBAPIClient {
         self.session = session
     }
 
+    func search(query: String, language: String, page: Int = 1) async throws -> [TMDBMediaResult] {
+        let response: TMDBPagedResponse<TMDBMediaResult> = try await get(
+            path: "/search/multi",
+            query: [
+                URLQueryItem(name: "query", value: query),
+                URLQueryItem(name: "language", value: language),
+                URLQueryItem(name: "include_adult", value: "false"),
+                URLQueryItem(name: "page", value: String(page))
+            ]
+        )
+        return response.results.filter { $0.mediaType == "movie" || $0.mediaType == "tv" }
+    }
+
     func trending(kind: MediaKind, timeWindow: String = "day", language: String) async throws -> [TMDBMediaResult] {
         let mediaPath = kind == .movie ? "movie" : "tv"
         let response: TMDBPagedResponse<TMDBMediaResult> = try await get(
@@ -73,6 +86,11 @@ actor TMDBAPIClient {
         return response.results.sorted {
             ($0.displayPriority ?? .max) < ($1.displayPriority ?? .max)
         }
+    }
+
+    func externalIDs(id: Int, kind: MediaKind) async throws -> TMDBExternalIDs {
+        let mediaPath = kind == .movie ? "movie" : "tv"
+        return try await get(path: "/\(mediaPath)/\(id)/external_ids", query: [])
     }
 
     func details(id: Int, kind: MediaKind, language: String) async throws -> TMDBMediaResult {

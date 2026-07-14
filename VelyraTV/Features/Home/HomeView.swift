@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var viewModel = HomeViewModel()
+    @State private var selectedItem: MediaItem?
 
     private var languageCode: String {
         appState.preferences.language.locale?.identifier ?? Locale.current.identifier
@@ -43,6 +44,9 @@ struct HomeView: View {
 
             content
         }
+        .fullScreenCover(item: $selectedItem) { item in
+            MediaDetailsView(item: item)
+        }
         .task(id: loadTaskID) {
             await viewModel.refresh(
                 traktSession: appState.traktSession,
@@ -81,8 +85,8 @@ struct HomeView: View {
             LazyVStack(alignment: .leading, spacing: 50) {
                 CinematicHeroView(
                     item: feed.hero,
-                    onPlay: {},
-                    onDetails: {}
+                    onPlay: { selectedItem = feed.hero },
+                    onDetails: { selectedItem = feed.hero }
                 )
 
                 if let warning {
@@ -99,7 +103,7 @@ struct HomeView: View {
                             style: .landscape,
                             items: feed.continueWatching
                         ),
-                        onSelect: { _ in }
+                        onSelect: { selectedItem = $0 }
                     )
                     .padding(.horizontal, 72)
                 }
@@ -108,13 +112,13 @@ struct HomeView: View {
                     .padding(.horizontal, 72)
 
                 if let selected = viewModel.selectedDiscoverySection {
-                    HomeSectionView(section: selected, onSelect: { _ in })
+                    HomeSectionView(section: selected, onSelect: { selectedItem = $0 })
                         .padding(.horizontal, 72)
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
 
                 ForEach(feed.sections) { section in
-                    HomeSectionView(section: section, onSelect: { _ in })
+                    HomeSectionView(section: section, onSelect: { selectedItem = $0 })
                         .padding(.horizontal, 72)
                 }
 

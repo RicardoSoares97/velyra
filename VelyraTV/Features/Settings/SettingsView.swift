@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
   @EnvironmentObject private var appState: AppState
+  @State private var showsResetConfirmation = false
 
   var body: some View {
     ZStack {
@@ -193,10 +194,29 @@ struct SettingsView: View {
           .foregroundStyle(.white.opacity(0.5))
       }
 
-      Button("settings.restartOnboarding") {
-        appState.resetOnboarding()
+      HStack(spacing: 16) {
+        Button("settings.restartOnboarding") {
+          appState.resetOnboarding()
+        }
+        .buttonStyle(VelyraGlassButtonStyle())
+
+        Button("settings.resetData", role: .destructive) {
+          showsResetConfirmation = true
+        }
+        .buttonStyle(VelyraGlassButtonStyle())
       }
-      .buttonStyle(VelyraGlassButtonStyle())
+      .confirmationDialog(
+        "settings.resetData.title",
+        isPresented: $showsResetConfirmation,
+        titleVisibility: .visible
+      ) {
+        Button("settings.resetData.confirm", role: .destructive) {
+          Task { await appState.resetApplicationData() }
+        }
+        Button("action.cancel", role: .cancel) {}
+      } message: {
+        Text("settings.resetData.body")
+      }
     }
   }
 }

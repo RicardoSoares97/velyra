@@ -4,17 +4,20 @@ struct PlaybackRequest: Equatable, Sendable {
   let title: String
   let originalLanguageCode: String?
   let sources: [PlaybackSource]
+  let externalSubtitles: [ExternalSubtitleTrack]
   let initialPosition: TimeInterval
 
   init(
     title: String,
     originalLanguageCode: String? = nil,
     sources: [PlaybackSource],
+    externalSubtitles: [ExternalSubtitleTrack] = [],
     initialPosition: TimeInterval = 0
   ) {
     self.title = title
     self.originalLanguageCode = originalLanguageCode
     self.sources = sources
+    self.externalSubtitles = externalSubtitles
     self.initialPosition = max(0, initialPosition)
   }
 }

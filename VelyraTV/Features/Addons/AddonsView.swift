@@ -47,6 +47,10 @@ struct AddonsView: View {
                                         Text(url.host ?? url.absoluteString)
                                             .font(.subheadline)
                                             .foregroundStyle(.white.opacity(0.58))
+                                        Text(capabilitySummary(manifest))
+                                            .font(.caption)
+                                            .foregroundStyle(.white.opacity(0.48))
+                                            .lineLimit(1)
                                     }
                                     Spacer()
                                     Button("addons.remove") {
@@ -93,6 +97,18 @@ struct AddonsView: View {
             Label(message, systemImage: "exclamationmark.triangle.fill")
                 .foregroundStyle(.white)
         }
+    }
+
+    private func capabilitySummary(_ manifest: AddonManifest) -> String {
+        let capabilities = [
+            manifest.supports(resource: "catalog") ? String(localized: "addons.capability.catalog") : nil,
+            manifest.supports(resource: "meta") ? String(localized: "addons.capability.metadata") : nil,
+            manifest.supports(resource: "stream") ? String(localized: "addons.capability.streams") : nil,
+            manifest.supports(resource: "subtitles") ? String(localized: "addons.capability.subtitles") : nil
+        ].compactMap { $0 }
+        return capabilities.isEmpty
+            ? String(localized: "addons.capability.unknown")
+            : capabilities.joined(separator: " · ")
     }
 
     private func install() async {

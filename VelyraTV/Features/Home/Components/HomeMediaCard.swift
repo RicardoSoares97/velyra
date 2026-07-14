@@ -32,6 +32,12 @@ struct HomeMediaCard: View {
         .accessibilityLabel(item.title)
         .accessibilityValue(item.accessibilitySummary)
         .accessibilityHint(Text("media.openDetails.hint"))
+        .contextMenu {
+            Button(action: action) {
+                Label("action.details", systemImage: "info.circle")
+            }
+        }
+        .accessibilityAction(named: Text("action.details"), action)
         .accessibleMotion(value: isFocused)
     }
 

@@ -18,13 +18,13 @@
 
 ## Phase 1 — Addon proof of concept
 
-- [ ] Validate addon manifest URL
-- [ ] Parse manifest and capabilities
-- [ ] Catalogue aggregation
-- [ ] Metadata details
-- [ ] Stream resolution
-- [ ] Subtitle resolution
-- [ ] Addon management and iCloud synchronisation
+- [x] Validate addon manifest URL
+- [x] Parse manifest and capabilities
+- [x] Catalogue aggregation and addon search
+- [x] Metadata details
+- [x] Stream resolution
+- [x] Subtitle resolution
+- [x] Addon management and iCloud synchronisation
 
 ## Phase 2 — Complete Trakt integration
 
@@ -42,12 +42,12 @@
 ## Phase 3 — Apple-quality TV experience
 
 - [x] Home hero and first dynamic content rails
-- [ ] Details screen with cinematic transition
-- [ ] Search with tvOS keyboard and voice input where available
-- [ ] Focus restoration
+- [x] Details screen with cinematic presentation
+- [x] Search with the native tvOS text-entry experience
+- [x] Top-level focus and section restoration
 - [x] Initial loading, preview and error states
-- [ ] Context menus
-- [ ] Top Shelf evaluation
+- [x] Context menus
+- [x] Top Shelf evaluation and extension contract
 - [ ] Accessibility audit on hardware
 
 ## Phase 4 — Playback quality
@@ -55,19 +55,19 @@
 - [x] Initial source/container ranking and AVFoundation playability check
 - [x] Native AVPlayerViewController path for HLS and MP4
 - [x] Automatic embedded audio/subtitle selection and player switching
-- [ ] External subtitles
+- [x] External SRT and WebVTT subtitles
 - [ ] Frame-rate and dynamic-range matching tests
 - [ ] Dolby Vision profile matrix
 - [ ] Dolby Atmos format matrix
-- [ ] Fallback/remux architecture
-- [ ] Player diagnostics and user-safe technical report
+- [x] Fallback/remux architecture documented
+- [x] Player diagnostics and user-safe technical report
 
 ## Phase 5 — Distribution
 
 - [ ] Apple Developer signing
 - [ ] iCloud container creation
 - [ ] TestFlight delivery
-- [ ] Privacy policy
+- [x] Privacy policy draft
 - [ ] App Store content/legal review
 - [ ] Crash reporting with opt-in privacy controls
 
@@ -79,4 +79,4 @@
 - [x] Filtros por género.
 - [x] Filtros por serviço de streaming e região.
 - [x] Velyra Top 10 regional com rotulagem transparente.
-- [ ] Cache persistente, estados vazios e modo offline degradado.
+- [x] Cache persistente, estados vazios e modo offline degradado.
