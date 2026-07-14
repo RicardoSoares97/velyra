@@ -36,7 +36,9 @@ final class HomeViewModel: ObservableObject {
         do {
             state = .loaded(try await repository.load(language: language, region: region))
         } catch {
-            state = .failed(error.localizedDescription, .preview(region: region))
+            let fallback = await repository.cachedFeed(language: language, region: region)
+                ?? .preview(region: region)
+            state = .failed(error.localizedDescription, fallback)
         }
     }
 

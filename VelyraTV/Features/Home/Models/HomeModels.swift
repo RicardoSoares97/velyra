@@ -5,7 +5,7 @@ enum MediaKind: String, Codable, Hashable, Sendable {
     case series
 }
 
-struct MediaItem: Identifiable, Hashable, Sendable {
+struct MediaItem: Identifiable, Hashable, Codable, Sendable {
     let id: String
     let tmdbID: Int?
     let imdbID: String?
@@ -29,26 +29,26 @@ struct MediaItem: Identifiable, Hashable, Sendable {
     }
 }
 
-struct GenreFilter: Identifiable, Hashable, Sendable {
+struct GenreFilter: Identifiable, Hashable, Codable, Sendable {
     let id: String
     let name: String
     let movieGenreID: Int?
     let seriesGenreID: Int?
 }
 
-struct StreamingProvider: Identifiable, Hashable, Sendable {
+struct StreamingProvider: Identifiable, Hashable, Codable, Sendable {
     let id: Int
     let name: String
     let logoURL: URL?
 }
 
-enum HomeSectionStyle: Hashable, Sendable {
+enum HomeSectionStyle: String, Hashable, Codable, Sendable {
     case landscape
     case poster
     case topTen
 }
 
-struct HomeSection: Identifiable, Hashable, Sendable {
+struct HomeSection: Identifiable, Hashable, Codable, Sendable {
     let id: String
     let title: String
     let subtitle: String?
@@ -56,7 +56,7 @@ struct HomeSection: Identifiable, Hashable, Sendable {
     let items: [MediaItem]
 }
 
-struct HomeFeed: Equatable, Sendable {
+struct HomeFeed: Equatable, Codable, Sendable {
     let hero: MediaItem
     let continueWatching: [MediaItem]
     let genres: [GenreFilter]

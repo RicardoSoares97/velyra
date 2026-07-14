@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AppShellView: View {
+    @SceneStorage("velyra.selectedSection") private var restoredSectionRaw = AppSection.home.rawValue
     @State private var selectedSection: AppSection = .home
     @FocusState private var focusedSection: AppSection?
 
@@ -13,7 +14,13 @@ struct AppShellView: View {
                 .padding(.top, 30)
                 .padding(.horizontal, 64)
         }
-        .onAppear { focusedSection = selectedSection }
+        .onAppear {
+            selectedSection = AppSection(rawValue: restoredSectionRaw) ?? .home
+            focusedSection = selectedSection
+        }
+        .onChange(of: selectedSection) { _, value in
+            restoredSectionRaw = value.rawValue
+        }
     }
 
     @ViewBuilder

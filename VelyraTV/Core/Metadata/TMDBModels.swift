@@ -18,6 +18,13 @@ struct TMDBMediaResult: Decodable, Sendable {
     let voteAverage: Double?
     let mediaType: String?
     let popularity: Double?
+    let originalLanguage: String?
+    let runtime: Int?
+    let episodeRunTime: [Int]?
+    let numberOfSeasons: Int?
+    let numberOfEpisodes: Int?
+    let tagline: String?
+    let status: String?
 
     enum CodingKeys: String, CodingKey {
         case id, title, name, overview, popularity
@@ -28,6 +35,12 @@ struct TMDBMediaResult: Decodable, Sendable {
         case genreIDs = "genre_ids"
         case voteAverage = "vote_average"
         case mediaType = "media_type"
+        case originalLanguage = "original_language"
+        case runtime
+        case episodeRunTime = "episode_run_time"
+        case numberOfSeasons = "number_of_seasons"
+        case numberOfEpisodes = "number_of_episodes"
+        case tagline, status
     }
 
     init(from decoder: Decoder) throws {
@@ -44,6 +57,13 @@ struct TMDBMediaResult: Decodable, Sendable {
         voteAverage = try container.decodeIfPresent(Double.self, forKey: .voteAverage)
         mediaType = try container.decodeIfPresent(String.self, forKey: .mediaType)
         popularity = try container.decodeIfPresent(Double.self, forKey: .popularity)
+        originalLanguage = try container.decodeIfPresent(String.self, forKey: .originalLanguage)
+        runtime = try container.decodeIfPresent(Int.self, forKey: .runtime)
+        episodeRunTime = try container.decodeIfPresent([Int].self, forKey: .episodeRunTime)
+        numberOfSeasons = try container.decodeIfPresent(Int.self, forKey: .numberOfSeasons)
+        numberOfEpisodes = try container.decodeIfPresent(Int.self, forKey: .numberOfEpisodes)
+        tagline = try container.decodeIfPresent(String.self, forKey: .tagline)
+        status = try container.decodeIfPresent(String.self, forKey: .status)
     }
 
     func mediaItem(kind fallbackKind: MediaKind, rank: Int? = nil, providerName: String? = nil) -> MediaItem {
@@ -104,5 +124,13 @@ struct TMDBProvider: Decodable, Sendable {
             name: providerName,
             logoURL: TMDBConfiguration.imageURL(path: logoPath, width: "w185")
         )
+    }
+}
+
+struct TMDBExternalIDs: Decodable, Sendable {
+    let imdbID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case imdbID = "imdb_id"
     }
 }

@@ -19,6 +19,11 @@ final class PlaybackCoordinator: ObservableObject {
   @Published private(set) var subtitleTracks: [MediaTrackChoice] = []
 
   let player = AVPlayer()
+  let externalSubtitles = ExternalSubtitleController()
+
+  var diagnostics: PlaybackDiagnostics? {
+    currentSource.map(PlaybackDiagnostics.init(source:))
+  }
 
   private let preferences: AppPreferences
   private let sourceSelector: AutomaticSourceSelector
@@ -51,6 +56,15 @@ final class PlaybackCoordinator: ObservableObject {
         RankedPlaybackSource(source: source, score: -index, reasons: ["manual-order"])
       }
 
+    let subtitleLanguage = RegionLanguageResolver.subtitleLanguageCode(
+      for: preferences.contentRegion ?? RegionLanguageResolver.regionCode()
+    )
+    externalSubtitles.configure(
+      tracks: request.externalSubtitles,
+      player: player,
+      preferredLanguage: nil
+    )
+
     guard let source = rankedSources.first?.source else {
       state = .failed(String(localized: "playback.error.noSources"))
       return
@@ -81,6 +95,7 @@ final class PlaybackCoordinator: ObservableObject {
   }
 
   func selectSubtitles(_ choice: MediaTrackChoice) {
+    Task { await externalSubtitles.select(nil) }
     guard let item = player.currentItem,
       let group = item.asset.mediaSelectionGroup(forMediaCharacteristic: .legible)
     else { return }
@@ -90,6 +105,18 @@ final class PlaybackCoordinator: ObservableObject {
     manuallySelectedSubtitleLanguage = choice.languageCode
     subtitlesManuallyDisabled = choice.isOff
     refreshTrackChoices(for: item)
+  }
+
+  func selectExternalSubtitle(_ track: ExternalSubtitleTrack?) async {
+    if let item = player.currentItem,
+      let group = item.asset.mediaSelectionGroup(forMediaCharacteristic: .legible)
+    {
+      item.select(nil, in: group)
+      refreshTrackChoices(for: item)
+    }
+    subtitlesManuallyDisabled = track == nil
+    manuallySelectedSubtitleLanguage = track?.languageCode
+    await externalSubtitles.select(track)
   }
 
   func retry() async {
@@ -152,6 +179,13 @@ final class PlaybackCoordinator: ObservableObject {
       }
 
       refreshTrackChoices(for: item)
+      if let subtitleGroup = asset.mediaSelectionGroup(forMediaCharacteristic: .legible),
+        item.currentMediaSelection.selectedMediaOption(in: subtitleGroup) != nil
+      {
+        await externalSubtitles.select(nil)
+      } else if preferences.subtitlesEnabledByDefault {
+        await externalSubtitles.selectPreferred(languageCode: subtitleLanguage)
+      }
       state = .ready
       if autoplay { player.play() }
     } catch {

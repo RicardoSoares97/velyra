@@ -1,6 +1,6 @@
 # Velyra
 
-Velyra is a native, cinematic media client for Apple TV. It combines an Apple-first tvOS experience with addon-based discovery, complete Trakt integration, iCloud preference synchronisation and accessible playback.
+Velyra is a native, cinematic media client for Apple TV. It combines an Apple-first tvOS experience with addon-based discovery, a Trakt integration foundation, iCloud preference synchronisation and accessible playback.
 
 > Current status: product architecture and interactive tvOS foundation. The project has not yet been compiled on macOS/Xcode.
 
@@ -10,7 +10,7 @@ Velyra is a native, cinematic media client for Apple TV. It combines an Apple-fi
 - Liquid Glass on tvOS 26+, with accessible material fallbacks on tvOS 17–25.
 - Cinematic, silent background loops with restrained blur and strong readability overlays.
 - No separate Velyra login: iCloud uses the Apple ID already configured on the device.
-- Trakt device authentication, watchlist, history, progress and scrobbling.
+- Trakt device authentication foundation, with the complete sync roadmap intentionally deferred.
 - HTTP/JSON addons for authorised catalogues, metadata, streams and subtitles.
 - Multi-language interface: English, Portuguese (Portugal), Spanish and French from the first foundation.
 - Accessibility, focus restoration and reduced-motion behaviour treated as release requirements.
@@ -71,7 +71,7 @@ VelyraTV/
 - `release/*`: release hardening and version preparation.
 - `hotfix/*`: urgent production fixes branched from `main`.
 
-The cinematic, smart-playback and Home foundations are integrated into `develop`. New product work must branch from `develop` using `feature/*`.
+The cinematic, smart-playback and Home foundations are integrated into `develop`. The active `feature/core-media-experience` branch connects discovery, details, addons, external subtitles and native playback. Complete Trakt expansion remains deliberately deferred.
 
 ## Apple platform contract
 
@@ -116,6 +116,21 @@ The Home architecture now supports:
 - mandatory TMDB and JustWatch attribution.
 
 `Velyra Top 10` is an editorial regional ranking, not an official cross-service audience chart. Platform-owned rankings will be identified separately when integrated.
+
+## Core media flow
+
+The current implementation connects:
+
+```text
+Home / Search
+→ Cinematic Details
+→ Installed addon metadata and episodes
+→ Aggregated streams and subtitles
+→ Automatic Apple-compatible source ranking
+→ Native AVKit player
+```
+
+The player exposes source, audio, embedded subtitles and addon subtitles without asking users to understand codecs or containers. See `docs/core-media-experience.md`.
 
 ## iCloud
 
