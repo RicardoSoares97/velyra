@@ -6,14 +6,16 @@ Velyra is a native, cinematic media client for Apple TV. It combines an Apple-fi
 
 ## Product principles
 
-- Native SwiftUI and AVKit experience designed for the Siri Remote.
+- Native SwiftUI and AVPlayerViewController experience designed for the Siri Remote.
 - Liquid Glass on tvOS 26+, with accessible material fallbacks on tvOS 17–25.
 - Cinematic, silent background loops with restrained blur and strong readability overlays.
 - No separate Velyra login: iCloud uses the Apple ID already configured on the device.
 - Trakt device authentication, watchlist, history, progress and scrobbling.
 - HTTP/JSON addons for authorised catalogues, metadata, streams and subtitles.
 - Multi-language interface: English, Portuguese (Portugal), Spanish and French from the first foundation.
-- Accessibility, focus restoration and reduced-motion behaviour treated as core requirements.
+- Accessibility, focus restoration and reduced-motion behaviour treated as release requirements.
+- One-screen onboarding with automatic source, original-audio and regional-subtitle defaults.
+- Smart source validation and failover that preserves playback position.
 - No bundled, hosted or promoted media content.
 
 ## Technology
@@ -41,6 +43,7 @@ VelyraTV/
 │   ├── Media/                   # Silent looping background video
 │   ├── Networking/              # Shared HTTP layer
 │   ├── Persistence/             # Local and iCloud preferences
+│   ├── Playback/                # Source ranking, media tracks and failover
 │   ├── Security/                # Keychain storage
 │   └── Sync/                    # Apple ID / iCloud availability
 ├── Features/
@@ -68,7 +71,11 @@ VelyraTV/
 - `release/*`: release hardening and version preparation.
 - `hotfix/*`: urgent production fixes branched from `main`.
 
-The current design work lives on `feature/cinematic-onboarding`.
+Current feature work is isolated in GitFlow branches, including `feature/cinematic-onboarding`, `feature/home-discovery` and `feature/smart-playback-onboarding`.
+
+## Apple platform contract
+
+`docs/apple-platform-standards.md` defines mandatory acceptance criteria for every feature and pull request. Native components, accessibility, localisation, privacy, focus and performance are release gates.
 
 ## Generate the Xcode project
 

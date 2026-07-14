@@ -54,3 +54,11 @@ Before each release:
 - Siri Remote directional navigation;
 - remote with touch surface disabled;
 - external keyboard navigation.
+
+## Smart playback and onboarding
+
+- Onboarding is a single screen with one primary action; no technical configuration is required.
+- Automatic selections are explained in plain language before they are applied.
+- Audio descriptions, SDH and transcription tracks remain visible and are labelled as accessibility tracks.
+- The player options panel reports the selected source, audio and subtitle choice through both visual state and accessibility values.
+- Source failover preserves playback position and does not require a timed response.

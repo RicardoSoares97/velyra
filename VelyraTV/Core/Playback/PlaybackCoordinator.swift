@@ -1,0 +1,237 @@
+import AVFoundation
+import Combine
+import Foundation
+
+@MainActor
+final class PlaybackCoordinator: ObservableObject {
+  enum State: Equatable {
+    case idle
+    case preparing
+    case ready
+    case switchingSource
+    case failed(String)
+  }
+
+  @Published private(set) var state: State = .idle
+  @Published private(set) var rankedSources: [RankedPlaybackSource] = []
+  @Published private(set) var currentSource: PlaybackSource?
+  @Published private(set) var audioTracks: [MediaTrackChoice] = []
+  @Published private(set) var subtitleTracks: [MediaTrackChoice] = []
+
+  let player = AVPlayer()
+
+  private let preferences: AppPreferences
+  private let sourceSelector: AutomaticSourceSelector
+  private let mediaResolver: MediaSelectionResolver
+  private var request: PlaybackRequest?
+  private var itemFailureCancellable: AnyCancellable?
+  private var manuallySelectedAudioLanguage: String?
+  private var manuallySelectedSubtitleLanguage: String?
+  private var subtitlesManuallyDisabled = false
+
+  init(
+    preferences: AppPreferences,
+    sourceSelector: AutomaticSourceSelector = AutomaticSourceSelector(),
+    mediaResolver: MediaSelectionResolver = MediaSelectionResolver()
+  ) {
+    self.preferences = preferences
+    self.sourceSelector = sourceSelector
+    self.mediaResolver = mediaResolver
+    player.automaticallyWaitsToMinimizeStalling = true
+    player.preventsDisplaySleepDuringVideoPlayback = true
+  }
+
+  func prepare(_ request: PlaybackRequest) async {
+    self.request = request
+    state = .preparing
+    rankedSources =
+      preferences.automaticSourceSelection
+      ? sourceSelector.rank(request.sources, preferences: preferences)
+      : request.sources.enumerated().map { index, source in
+        RankedPlaybackSource(source: source, score: -index, reasons: ["manual-order"])
+      }
+
+    guard let source = rankedSources.first?.source else {
+      state = .failed(String(localized: "playback.error.noSources"))
+      return
+    }
+
+    await load(source, position: request.initialPosition, autoplay: true)
+  }
+
+  func selectSource(_ source: PlaybackSource) async {
+    let currentPosition = player.currentTime().seconds
+    state = .switchingSource
+    await load(
+      source,
+      position: currentPosition.isFinite ? currentPosition : 0,
+      autoplay: player.rate > 0
+    )
+  }
+
+  func selectAudio(_ choice: MediaTrackChoice) {
+    guard let item = player.currentItem,
+      let group = item.asset.mediaSelectionGroup(forMediaCharacteristic: .audible)
+    else { return }
+
+    let option = mediaResolver.option(matching: choice.id, in: group, kind: .audio)
+    item.select(option, in: group)
+    manuallySelectedAudioLanguage = choice.languageCode
+    refreshTrackChoices(for: item)
+  }
+
+  func selectSubtitles(_ choice: MediaTrackChoice) {
+    guard let item = player.currentItem,
+      let group = item.asset.mediaSelectionGroup(forMediaCharacteristic: .legible)
+    else { return }
+
+    let option = mediaResolver.option(matching: choice.id, in: group, kind: .subtitles)
+    item.select(option, in: group)
+    manuallySelectedSubtitleLanguage = choice.languageCode
+    subtitlesManuallyDisabled = choice.isOff
+    refreshTrackChoices(for: item)
+  }
+
+  func retry() async {
+    guard let request else { return }
+    await prepare(request)
+  }
+
+  private func load(
+    _ source: PlaybackSource,
+    position: TimeInterval,
+    autoplay: Bool
+  ) async {
+    do {
+      let asset = AVURLAsset(
+        url: source.url,
+        options: source.headers.isEmpty
+          ? nil
+          : ["AVURLAssetHTTPHeaderFieldsKey": source.headers]
+      )
+      let playable = try await asset.load(.isPlayable)
+      guard playable else { throw PlaybackError.notPlayable }
+
+      let item = AVPlayerItem(asset: asset)
+      installFailureObserver(for: item)
+      player.replaceCurrentItem(with: item)
+      currentSource = source
+
+      let subtitleLanguage = RegionLanguageResolver.subtitleLanguageCode(
+        for: preferences.contentRegion ?? RegionLanguageResolver.regionCode()
+      )
+      let resolved = try await mediaResolver.resolve(
+        item: item,
+        originalLanguageCode: request?.originalLanguageCode,
+        subtitleLanguageCode: subtitleLanguage,
+        preferences: preferences
+      )
+
+      if let audioGroup = asset.mediaSelectionGroup(forMediaCharacteristic: .audible) {
+        let selectedAudio =
+          manuallySelectedAudioLanguage.flatMap {
+            mediaResolver.option(matchingLanguage: $0, in: audioGroup)
+          } ?? resolved.audio
+        item.select(selectedAudio, in: audioGroup)
+      }
+      if let subtitleGroup = asset.mediaSelectionGroup(forMediaCharacteristic: .legible) {
+        let selectedSubtitles: AVMediaSelectionOption?
+        if subtitlesManuallyDisabled {
+          selectedSubtitles = nil
+        } else {
+          selectedSubtitles =
+            manuallySelectedSubtitleLanguage.flatMap {
+              mediaResolver.option(matchingLanguage: $0, in: subtitleGroup)
+            } ?? resolved.subtitles
+        }
+        item.select(selectedSubtitles, in: subtitleGroup)
+      }
+
+      if position > 0 {
+        await seek(to: position)
+      }
+
+      refreshTrackChoices(for: item)
+      state = .ready
+      if autoplay { player.play() }
+    } catch {
+      await failover(after: source, underlyingError: error)
+    }
+  }
+
+  private func installFailureObserver(for item: AVPlayerItem) {
+    itemFailureCancellable = NotificationCenter.default
+      .publisher(for: .AVPlayerItemFailedToPlayToEndTime, object: item)
+      .sink { [weak self] notification in
+        let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
+        Task { @MainActor in
+          guard let self, let source = self.currentSource else { return }
+          await self.failover(after: source, underlyingError: error)
+        }
+      }
+  }
+
+  private func seek(to seconds: TimeInterval) async {
+    await withCheckedContinuation { continuation in
+      player.seek(
+        to: CMTime(seconds: seconds, preferredTimescale: 600),
+        toleranceBefore: .zero,
+        toleranceAfter: .zero
+      ) { _ in
+        continuation.resume()
+      }
+    }
+  }
+
+  private func failover(after source: PlaybackSource, underlyingError: Error?) async {
+    guard preferences.automaticSourceFailover,
+      let currentIndex = rankedSources.firstIndex(where: { $0.source.id == source.id }),
+      rankedSources.indices.contains(currentIndex + 1)
+    else {
+      state = .failed(
+        underlyingError?.localizedDescription ?? String(localized: "playback.error.generic"))
+      return
+    }
+
+    let position = player.currentTime().seconds
+    await load(
+      rankedSources[currentIndex + 1].source,
+      position: position.isFinite ? position : 0,
+      autoplay: true
+    )
+  }
+
+  private func refreshTrackChoices(for item: AVPlayerItem) {
+    let audioGroup = item.asset.mediaSelectionGroup(forMediaCharacteristic: .audible)
+    let subtitleGroup = item.asset.mediaSelectionGroup(forMediaCharacteristic: .legible)
+    let selectedAudio = audioGroup.flatMap {
+      item.currentMediaSelection.selectedMediaOption(in: $0)
+    }
+    let selectedSubtitles = subtitleGroup.flatMap {
+      item.currentMediaSelection.selectedMediaOption(in: $0)
+    }
+
+    audioTracks = mediaResolver.choices(
+      from: audioGroup,
+      selected: selectedAudio,
+      kind: .audio,
+      includeOff: false
+    )
+    subtitleTracks = mediaResolver.choices(
+      from: subtitleGroup,
+      selected: selectedSubtitles,
+      kind: .subtitles,
+      includeOff: true
+    )
+  }
+}
+
+private enum PlaybackError: LocalizedError {
+  case notPlayable
+
+  var errorDescription: String? {
+    switch self {
+    case .notPlayable: String(localized: "playback.error.notPlayable")
+    }
+  }
+}

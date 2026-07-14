@@ -45,15 +45,9 @@ Data
 
 ## Onboarding without a login
 
-The introduction is a product tour, not an authentication form:
+The introduction is one calm decision, not a configuration wizard. It explains that Velyra automatically chooses a compatible source, original audio and regional subtitles. The primary action applies recommended settings and opens the app. Trakt is optional and can be connected on the same screen or later in Settings.
 
-1. Velyra identity and cinematic experience.
-2. Personalised home and content organisation.
-3. Automatic iCloud synchronisation through the Apple ID configured in tvOS.
-4. Optional Trakt device-code connection.
-5. Completion and entry into the app.
-
-The user can skip Trakt and connect later. iCloud failure must never block use; Velyra falls back to local settings.
+iCloud synchronisation uses the Apple ID already configured in tvOS. iCloud failure never blocks use; Velyra falls back to local settings.
 
 ## App shell
 
@@ -69,7 +63,9 @@ The navigation floats above content using Liquid Glass where available. Content 
 
 ## Playback
 
-AVPlayer is the primary engine for the best tvOS integration, accessibility support and Apple HDR/audio pipeline.
+AVPlayer and AVPlayerViewController are the primary engine and presentation for native tvOS integration, accessibility, system playback behaviour and Apple HDR/audio pipelines.
+
+The smart-playback domain ranks sources independently from the UI, validates the selected asset through AVFoundation, selects media tracks and preserves position during source failover. See `docs/smart-playback.md`.
 
 The future playback coordinator will choose between:
 
