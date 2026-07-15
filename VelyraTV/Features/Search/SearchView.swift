@@ -13,6 +13,35 @@ struct SearchView: View {
 
   var body: some View {
     ZStack {
+      background
+      ScrollView {
+        LazyVStack(alignment: .leading, spacing: 28) {
+          header
+          searchField
+          filters
+          resultContent
+          Spacer(minLength: 80)
+        }
+        .padding(.horizontal, 72)
+        .padding(.top, 130)
+      }
+    }
+    .task {
+      await viewModel.loadHistory()
+      searchFocused = true
+    }
+    .task(id: SearchTaskID(query: query, kind: viewModel.kindFilter, sort: viewModel.sort)) {
+      do { try await Task.sleep(for: .milliseconds(350)) } catch { return }
+      guard !Task.isCancelled else { return }
+      await performSearch(saveToHistory: false)
+    }
+    .fullScreenCover(item: $selectedItem) { item in
+      MediaDetailsView(item: item).environmentObject(appState)
+    }
+  }
+
+  private var background: some View {
+    ZStack {
       Color.black.ignoresSafeArea()
       LinearGradient(
         colors: [Color.indigo.opacity(0.2), .black, VelyraTheme.primary.opacity(0.08)],
@@ -21,29 +50,7 @@ struct SearchView: View {
       )
       .ignoresSafeArea()
       .accessibilityHidden(true)
-
-      VStack(alignment: .leading, spacing: 28) {
-        header
-        searchField
-        resultContent
-        Spacer(minLength: 60)
-      }
-      .padding(.horizontal, 72)
-      .padding(.top, 130)
     }
-    .task(id: query) {
-      do { try await Task.sleep(for: .milliseconds(350)) } catch { return }
-      guard !Task.isCancelled else { return }
-      await viewModel.search(
-        query: query,
-        language: languageCode,
-        addonManifestURLs: appState.preferences.addonManifestURLs
-      )
-    }
-    .fullScreenCover(item: $selectedItem) { item in
-      MediaDetailsView(item: item)
-    }
-    .onAppear { searchFocused = true }
   }
 
   private var header: some View {
@@ -67,9 +74,12 @@ struct SearchView: View {
         .font(.title2)
         .focused($searchFocused)
         .submitLabel(.search)
+        .onSubmit { Task { await performSearch(saveToHistory: true) } }
         .accessibilityLabel(Text("search.accessibilityLabel"))
       if !query.isEmpty {
-        Button { query = "" } label: {
+        Button {
+          query = ""
+        } label: {
           Image(systemName: "xmark.circle.fill")
         }
         .buttonStyle(.plain)
@@ -82,52 +92,119 @@ struct SearchView: View {
     .frame(maxWidth: 1_050)
   }
 
+  private var filters: some View {
+    HStack(spacing: 14) {
+      ForEach(SearchViewModel.KindFilter.allCases) { filter in
+        Button {
+          viewModel.kindFilter = filter
+          viewModel.filtersChanged()
+        } label: {
+          Text(LocalizedStringKey(filter.titleKey))
+            .font(.headline)
+            .padding(.horizontal, 20)
+            .frame(minHeight: 54)
+            .background {
+              if viewModel.kindFilter == filter {
+                Capsule().fill(VelyraTheme.primary.opacity(0.86))
+              }
+            }
+        }
+        .buttonStyle(VelyraGlassButtonStyle())
+        .accessibilityAddTraits(viewModel.kindFilter == filter ? .isSelected : [])
+      }
+
+      Spacer()
+
+      Picker("search.year", selection: $viewModel.yearFilter) {
+        ForEach(SearchViewModel.YearFilter.allCases) { value in
+          Text(LocalizedStringKey(value.titleKey)).tag(value)
+        }
+      }
+      .frame(width: 270)
+      .onChange(of: viewModel.yearFilter) { _, _ in viewModel.filtersChanged() }
+
+      Picker("search.rating", selection: $viewModel.ratingFilter) {
+        ForEach(SearchViewModel.RatingFilter.allCases) { value in
+          Text(LocalizedStringKey(value.titleKey)).tag(value)
+        }
+      }
+      .frame(width: 230)
+      .onChange(of: viewModel.ratingFilter) { _, _ in viewModel.filtersChanged() }
+
+      Picker("search.sort", selection: $viewModel.sort) {
+        ForEach(SearchViewModel.Sort.allCases) { value in
+          Text(LocalizedStringKey(value.titleKey)).tag(value)
+        }
+      }
+      .frame(width: 330)
+      .onChange(of: viewModel.sort) { _, _ in viewModel.filtersChanged() }
+    }
+  }
+
   @ViewBuilder
   private var resultContent: some View {
     switch viewModel.state {
     case .idle:
-      suggestionView
+      recentSearches
     case .searching:
       HStack(spacing: 14) {
         ProgressView().tint(VelyraTheme.primary)
         Text("search.searching")
       }
       .foregroundStyle(.white)
+      .accessibilityElement(children: .combine)
+      .accessibilityLiveRegion(.polite)
     case .empty:
       emptyView(
-        title: "search.empty.title",
-        body: String(localized: "search.empty.body"),
-        icon: "film.stack"
-      )
+        title: "search.empty.title", body: String(localized: "search.empty.body"),
+        icon: "film.stack")
     case .failed(let message):
       emptyView(title: "search.error.title", body: message, icon: "wifi.exclamationmark")
     case .results:
-      ScrollView(.horizontal, showsIndicators: false) {
-        LazyHStack(spacing: 26) {
-          ForEach(viewModel.results) { item in
-            HomeMediaCard(item: item, style: .poster) {
-              selectedItem = item
+      LazyVGrid(columns: [GridItem(.adaptive(minimum: 235), spacing: 28)], spacing: 34) {
+        ForEach(viewModel.results) { item in
+          HomeMediaCard(item: item, style: .poster) { selectedItem = item }
+            .task { await viewModel.loadNextPageIfNeeded(currentItem: item) }
+        }
+      }
+      .padding(.vertical, 18)
+    }
+  }
+
+  @ViewBuilder
+  private var recentSearches: some View {
+    if viewModel.recentSearches.isEmpty || !appState.preferences.searchHistoryEnabled {
+      Label("search.suggestion", systemImage: "sparkles")
+        .font(.headline)
+        .foregroundStyle(.white.opacity(0.62))
+        .padding(.top, 18)
+    } else {
+      VStack(alignment: .leading, spacing: 18) {
+        HStack {
+          Text("search.recent").font(.title2.bold()).foregroundStyle(.white)
+          Spacer()
+          Button("search.clearHistory") { Task { await viewModel.clearHistory() } }
+            .buttonStyle(VelyraGlassButtonStyle())
+        }
+        ScrollView(.horizontal, showsIndicators: false) {
+          LazyHStack(spacing: 14) {
+            ForEach(viewModel.recentSearches, id: \.self) { value in
+              Button(value) {
+                query = value
+                Task { await performSearch(saveToHistory: true) }
+              }
+              .buttonStyle(VelyraGlassButtonStyle())
             }
           }
+          .padding(.vertical, 8)
         }
-        .padding(.vertical, 24)
-        .padding(.horizontal, 4)
       }
     }
   }
 
-  private var suggestionView: some View {
-    Label("search.suggestion", systemImage: "sparkles")
-      .font(.headline)
-      .foregroundStyle(.white.opacity(0.62))
-      .padding(.top, 18)
-  }
-
   private func emptyView(title: LocalizedStringKey, body: String, icon: String) -> some View {
     VStack(alignment: .leading, spacing: 12) {
-      Image(systemName: icon)
-        .font(.system(size: 38))
-        .foregroundStyle(VelyraTheme.primary)
+      Image(systemName: icon).font(.system(size: 38)).foregroundStyle(VelyraTheme.primary)
       Text(title).font(.title2.bold())
       Text(body).font(.body).foregroundStyle(.secondary)
     }
@@ -136,4 +213,19 @@ struct SearchView: View {
     .velyraGlass(cornerRadius: 26)
     .frame(maxWidth: 720, alignment: .leading)
   }
+
+  private func performSearch(saveToHistory: Bool) async {
+    await viewModel.search(
+      query: query,
+      language: languageCode,
+      addonManifestURLs: appState.preferences.activeAddonManifestURLs,
+      saveToHistory: saveToHistory && appState.preferences.searchHistoryEnabled
+    )
+  }
+}
+
+private struct SearchTaskID: Hashable {
+  let query: String
+  let kind: SearchViewModel.KindFilter
+  let sort: SearchViewModel.Sort
 }

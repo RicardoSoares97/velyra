@@ -17,6 +17,10 @@ final class PlaybackCoordinator: ObservableObject {
   @Published private(set) var currentSource: PlaybackSource?
   @Published private(set) var audioTracks: [MediaTrackChoice] = []
   @Published private(set) var subtitleTracks: [MediaTrackChoice] = []
+  @Published private(set) var selectedAudioLanguageCode: String?
+  @Published private(set) var selectedSubtitleLanguageCode: String?
+  @Published private(set) var selectedSourceAddonID: String?
+  @Published private(set) var subtitlesDisabled = false
 
   let player = AVPlayer()
   let externalSubtitles = ExternalSubtitleController()
@@ -33,6 +37,9 @@ final class PlaybackCoordinator: ObservableObject {
   private var manuallySelectedAudioLanguage: String?
   private var manuallySelectedSubtitleLanguage: String?
   private var subtitlesManuallyDisabled = false
+  private var scrobbleController: TraktScrobbleController?
+  private var contentPreference: ContentPlaybackPreference?
+  private var failedSourceIDs = Set<String>()
 
   init(
     preferences: AppPreferences,
@@ -46,8 +53,21 @@ final class PlaybackCoordinator: ObservableObject {
     player.preventsDisplaySleepDuringVideoPlayback = true
   }
 
+  func configureContentPreference(_ preference: ContentPlaybackPreference?) {
+    contentPreference = preference
+    manuallySelectedAudioLanguage = preference?.audioLanguageCode
+    manuallySelectedSubtitleLanguage = preference?.subtitleLanguageCode
+    subtitlesManuallyDisabled = preference?.subtitlesEnabled == false
+    selectedAudioLanguageCode = preference?.audioLanguageCode
+    selectedSubtitleLanguageCode = preference?.subtitleLanguageCode
+    subtitlesDisabled = preference?.subtitlesEnabled == false
+    selectedSourceAddonID = preference?.preferredSourceAddonID
+    externalSubtitles.setTimingOffset(preference?.subtitleTimingOffset ?? 0)
+  }
+
   func prepare(_ request: PlaybackRequest) async {
     self.request = request
+    failedSourceIDs.removeAll()
     state = .preparing
     rankedSources =
       preferences.automaticSourceSelection
@@ -55,10 +75,15 @@ final class PlaybackCoordinator: ObservableObject {
       : request.sources.enumerated().map { index, source in
         RankedPlaybackSource(source: source, score: -index, reasons: ["manual-order"])
       }
+    if let preferredAddon = contentPreference?.preferredSourceAddonID {
+      rankedSources.sort { lhs, rhs in
+        let lhsPreferred = lhs.source.addonName == preferredAddon
+        let rhsPreferred = rhs.source.addonName == preferredAddon
+        if lhsPreferred != rhsPreferred { return lhsPreferred }
+        return lhs.score > rhs.score
+      }
+    }
 
-    let subtitleLanguage = RegionLanguageResolver.subtitleLanguageCode(
-      for: preferences.contentRegion ?? RegionLanguageResolver.regionCode()
-    )
     externalSubtitles.configure(
       tracks: request.externalSubtitles,
       player: player,
@@ -91,6 +116,7 @@ final class PlaybackCoordinator: ObservableObject {
     let option = mediaResolver.option(matching: choice.id, in: group, kind: .audio)
     item.select(option, in: group)
     manuallySelectedAudioLanguage = choice.languageCode
+    selectedAudioLanguageCode = choice.languageCode
     refreshTrackChoices(for: item)
   }
 
@@ -104,6 +130,8 @@ final class PlaybackCoordinator: ObservableObject {
     item.select(option, in: group)
     manuallySelectedSubtitleLanguage = choice.languageCode
     subtitlesManuallyDisabled = choice.isOff
+    selectedSubtitleLanguageCode = choice.languageCode
+    subtitlesDisabled = choice.isOff
     refreshTrackChoices(for: item)
   }
 
@@ -116,12 +144,34 @@ final class PlaybackCoordinator: ObservableObject {
     }
     subtitlesManuallyDisabled = track == nil
     manuallySelectedSubtitleLanguage = track?.languageCode
+    selectedSubtitleLanguageCode = track?.languageCode
+    subtitlesDisabled = track == nil
     await externalSubtitles.select(track)
   }
 
   func retry() async {
     guard let request else { return }
     await prepare(request)
+  }
+
+  func attachTrakt(
+    repository: TraktLibraryRepository,
+    context: TraktPlaybackContext
+  ) {
+    guard scrobbleController == nil else { return }
+    let controller = TraktScrobbleController(
+      player: player,
+      repository: repository,
+      context: context
+    )
+    scrobbleController = controller
+    controller.start()
+  }
+
+  func finishPlaybackTracking() async {
+    await scrobbleController?.finish()
+    await scrobbleController?.detach()
+    scrobbleController = nil
   }
 
   private func load(
@@ -143,10 +193,27 @@ final class PlaybackCoordinator: ObservableObject {
       installFailureObserver(for: item)
       player.replaceCurrentItem(with: item)
       currentSource = source
+      selectedSourceAddonID = source.addonName
 
-      let subtitleLanguage = RegionLanguageResolver.subtitleLanguageCode(
+      let regionalSubtitleLanguage = RegionLanguageResolver.subtitleLanguageCode(
         for: preferences.contentRegion ?? RegionLanguageResolver.regionCode()
       )
+      let subtitleLanguage: String
+      switch preferences.preferredSubtitleLanguage {
+      case .region:
+        subtitleLanguage = regionalSubtitleLanguage
+      case .system:
+        subtitleLanguage = Locale.preferredLanguages.first ?? regionalSubtitleLanguage
+      case .custom:
+        subtitleLanguage = preferences.preferredSubtitleLanguageCode ?? regionalSubtitleLanguage
+      case .off:
+        subtitleLanguage = regionalSubtitleLanguage
+      }
+      let externalSubtitleCandidates = [
+        manuallySelectedSubtitleLanguage,
+        subtitleLanguage,
+        preferences.secondarySubtitleLanguageCode,
+      ].compactMap { $0 }
       let resolved = try await mediaResolver.resolve(
         item: item,
         originalLanguageCode: request?.originalLanguageCode,
@@ -174,8 +241,18 @@ final class PlaybackCoordinator: ObservableObject {
         item.select(selectedSubtitles, in: subtitleGroup)
       }
 
-      if position > 0 {
-        await seek(to: position)
+      var resolvedPosition = position
+      if resolvedPosition <= 0,
+        let initialProgress = request?.initialProgress,
+        initialProgress > 0
+      {
+        let duration = try? await asset.load(.duration)
+        if let durationSeconds = duration?.seconds, durationSeconds.isFinite, durationSeconds > 0 {
+          resolvedPosition = durationSeconds * (initialProgress / 100)
+        }
+      }
+      if resolvedPosition > 0 {
+        await seek(to: resolvedPosition)
       }
 
       refreshTrackChoices(for: item)
@@ -184,8 +261,9 @@ final class PlaybackCoordinator: ObservableObject {
       {
         await externalSubtitles.select(nil)
       } else if preferences.subtitlesEnabledByDefault {
-        await externalSubtitles.selectPreferred(languageCode: subtitleLanguage)
+        await externalSubtitles.selectPreferred(languageCodes: externalSubtitleCandidates)
       }
+      failedSourceIDs.remove(source.id)
       state = .ready
       if autoplay { player.play() }
     } catch {
@@ -218,18 +296,25 @@ final class PlaybackCoordinator: ObservableObject {
   }
 
   private func failover(after source: PlaybackSource, underlyingError: Error?) async {
-    guard preferences.automaticSourceFailover,
-      let currentIndex = rankedSources.firstIndex(where: { $0.source.id == source.id }),
-      rankedSources.indices.contains(currentIndex + 1)
-    else {
+    failedSourceIDs.insert(source.id)
+    guard preferences.automaticSourceFailover else {
       state = .failed(
         underlyingError?.localizedDescription ?? String(localized: "playback.error.generic"))
       return
     }
 
+    guard let next = rankedSources.first(where: { !failedSourceIDs.contains($0.source.id) })?.source
+    else {
+      state = .failed(
+        underlyingError?.localizedDescription
+          ?? String(localized: "playback.error.allSourcesFailed"))
+      return
+    }
+
     let position = player.currentTime().seconds
+    state = .switchingSource
     await load(
-      rankedSources[currentIndex + 1].source,
+      next,
       position: position.isFinite ? position : 0,
       autoplay: true
     )

@@ -7,6 +7,8 @@ Velyra is designed to work without a separate Velyra account.
 - Preferences and installed addon manifest addresses may be synchronised through the user's private iCloud account.
 - Trakt access and refresh tokens are stored in the device Keychain and are not copied into iCloud by Velyra.
 - A local cache may contain public media titles, artwork addresses and Home layout data to improve reliability.
+- Search history is optional, stored locally and can be cleared independently.
+- Velyra stores a local count of detected unclean app exits for opt-in diagnostics; this does not leave the device automatically.
 - Playback diagnostics shown to the user omit stream URLs, credentials and request headers.
 
 ## External services
@@ -15,6 +17,6 @@ When configured by the user, Velyra communicates directly with TMDB, Trakt and i
 
 ## Deletion
 
-Users can remove addons, disconnect Trakt, reset app settings and delete the app. iCloud-synchronised settings can be removed through a future in-app reset action before public distribution.
+Users can remove addons, disconnect Trakt, clear caches, clear search history, delete only the private iCloud record, reset individual settings domains or reset the complete app. The complete reset removes the private CloudKit user-state record, local caches, queued Trakt changes, Top Shelf snapshot, local launch-health information and the Keychain Trakt session managed by Velyra.
 
-This draft requires legal review and final service/contact details before TestFlight or App Store publication.
+This draft still requires legal review plus final operator, support, contact and service-policy details before TestFlight or App Store publication.

@@ -16,18 +16,21 @@ actor MediaPlaybackResolver {
   private let repository: any AddonContentProviding
   private let mapper = AddonStreamPlaybackMapper()
 
-  init(repository: any AddonContentProviding = AddonContentRepository()) {
+  init(repository: any AddonContentProviding = AddonContentRepository.shared) {
     self.repository = repository
   }
 
   func resolve(
     item: MediaItem,
-    playbackID: String? = nil,
+    addonPlaybackID: String? = nil,
     originalLanguageCode: String?,
-    addonManifestURLs: [String]
+    addonManifestURLs: [String],
+    episode: AddonVideo? = nil,
+    initialProgress: Double? = nil,
+    traktPlaybackID: Int? = nil
   ) async throws -> PlaybackRequest {
     guard !addonManifestURLs.isEmpty else { throw ResolutionError.noAddons }
-    let id = playbackID ?? item.addonLookupID
+    let id = addonPlaybackID ?? item.addonLookupID
     let type = item.kind.addonType
 
     async let streamTask = repository.streams(type: type, id: id, urlStrings: addonManifestURLs)
@@ -43,7 +46,8 @@ actor MediaPlaybackResolver {
     let externalTracks = resolvedSubtitles.map { resolved in
       let language = resolved.subtitle.lang
       let locale = Locale(identifier: language)
-      let displayName = locale.localizedString(forIdentifier: language)
+      let displayName =
+        locale.localizedString(forIdentifier: language)
         ?? locale.localizedString(forLanguageCode: language)
         ?? language.uppercased()
       return ExternalSubtitleTrack(
@@ -56,13 +60,55 @@ actor MediaPlaybackResolver {
     }
 
     return PlaybackRequest(
+      contentKey: episode.map { "\(item.id):s\($0.season ?? 0)e\($0.episode ?? 0)" } ?? item.id,
       title: item.title,
       originalLanguageCode: originalLanguageCode,
       sources: sources,
       externalSubtitles: externalTracks,
-      initialPosition: 0
+      initialPosition: 0,
+      initialProgress: initialProgress,
+      traktContext: traktContext(for: item, episode: episode, playbackID: traktPlaybackID)
     )
   }
+  private func traktContext(
+    for item: MediaItem,
+    episode: AddonVideo?,
+    playbackID: Int?
+  ) -> TraktPlaybackContext {
+    let ids = TraktIDs(
+      trakt: item.traktID,
+      slug: nil,
+      imdb: item.imdbID,
+      tmdb: item.tmdbID
+    )
+    if item.kind == .movie {
+      return TraktPlaybackContext(
+        reference: TraktMediaReference(
+          movie: TraktMovie(title: item.title, year: item.releaseYear, ids: ids)
+        ),
+        playbackID: playbackID
+      )
+    }
+
+    let show = TraktShow(title: item.title, year: item.releaseYear, ids: ids)
+    let resolvedSeason = episode?.season ?? item.seasonNumber
+    let resolvedNumber = episode?.episode ?? item.episodeNumber
+    if let season = resolvedSeason, let number = resolvedNumber {
+      return TraktPlaybackContext(
+        reference: TraktMediaReference(
+          show: show,
+          episode: TraktEpisode(
+            season: season,
+            number: number,
+            title: episode?.title
+          )
+        ),
+        playbackID: playbackID
+      )
+    }
+    return TraktPlaybackContext(reference: TraktMediaReference(show: show), playbackID: playbackID)
+  }
+
 }
 
 extension MediaItem {

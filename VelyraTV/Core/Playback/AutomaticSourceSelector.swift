@@ -51,7 +51,7 @@ struct AutomaticSourceSelector {
     }
 
     if source.isCached {
-      score += 110
+      score += preferences.preferCachedSources ? 110 : 30
       reasons.append("cached")
     }
 

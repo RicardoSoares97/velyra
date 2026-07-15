@@ -3,6 +3,7 @@ import SwiftUI
 
 struct VelyraPlayerView: View {
   @Environment(\.dismiss) private var dismiss
+  @EnvironmentObject private var appState: AppState
 
   let request: PlaybackRequest
 
@@ -44,7 +45,12 @@ struct VelyraPlayerView: View {
       SystemPlayerView(player: coordinator.player)
         .ignoresSafeArea()
 
-      ExternalSubtitleOverlay(controller: coordinator.externalSubtitles)
+      ExternalSubtitleOverlay(
+        controller: coordinator.externalSubtitles,
+        textSize: appState.preferences.subtitleTextSize,
+        verticalOffset: appState.preferences.subtitleVerticalOffset,
+        backgroundOpacity: appState.preferences.subtitleBackgroundOpacity
+      )
 
       topControls
 
@@ -66,8 +72,37 @@ struct VelyraPlayerView: View {
       }
     }
     .background(Color.black)
-    .task { await coordinator.prepare(request) }
-    .onDisappear { coordinator.player.pause() }
+    .task {
+      coordinator.configureContentPreference(
+        appState.contentPlaybackPreference(for: request.contentKey)
+      )
+      await coordinator.prepare(request)
+      if let context = request.traktContext {
+        coordinator.attachTrakt(
+          repository: appState.traktLibraryRepository,
+          context: context
+        )
+      }
+    }
+    .onDisappear {
+      coordinator.player.pause()
+      Task { await coordinator.finishPlaybackTracking() }
+    }
+    .onChange(of: coordinator.selectedAudioLanguageCode) { _, value in
+      persistContentPreference { $0.audioLanguageCode = value }
+    }
+    .onChange(of: coordinator.selectedSubtitleLanguageCode) { _, value in
+      persistContentPreference { $0.subtitleLanguageCode = value }
+    }
+    .onChange(of: coordinator.selectedSourceAddonID) { _, value in
+      persistContentPreference { $0.preferredSourceAddonID = value }
+    }
+    .onChange(of: coordinator.subtitlesDisabled) { _, disabled in
+      persistContentPreference { $0.subtitlesEnabled = !disabled }
+    }
+    .onChange(of: coordinator.externalSubtitles.timingOffset) { _, value in
+      persistContentPreference { $0.subtitleTimingOffset = value }
+    }
     .onExitCommand {
       if showsOptions {
         showsOptions = false
@@ -76,6 +111,12 @@ struct VelyraPlayerView: View {
       }
     }
     .accessibleMotion(value: showsOptions)
+  }
+
+  private func persistContentPreference(
+    _ mutate: (inout ContentPlaybackPreference) -> Void
+  ) {
+    appState.updateContentPlaybackPreference(for: request.contentKey, mutate)
   }
 
   private var topControls: some View {
@@ -209,6 +250,7 @@ private struct PlayerOptionsPanel: View {
                 Task { await coordinator.selectExternalSubtitle(track) }
               }
             )
+            SubtitleTimingControls(controller: coordinator.externalSubtitles)
           }
 
           if let diagnostics = coordinator.diagnostics {
@@ -332,6 +374,7 @@ private struct PlayerOptionsPanel: View {
 }
 
 private struct OptionRow: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.isFocused) private var isFocused
 
   let title: String
@@ -371,31 +414,33 @@ private struct OptionRow: View {
         .stroke(isFocused ? VelyraTheme.focusRing : .clear, lineWidth: 3)
     }
     .scaleEffect(isFocused ? 1.025 : 1)
-    .animation(.easeOut(duration: 0.14), value: isFocused)
+    .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: isFocused)
   }
 }
 
-
 private struct ExternalSubtitleOverlay: View {
   @ObservedObject var controller: ExternalSubtitleController
+  let textSize: SubtitleTextSizePreference
+  let verticalOffset: Double
+  let backgroundOpacity: Double
 
   var body: some View {
     VStack {
       Spacer()
       if let text = controller.currentText {
         Text(text)
-          .font(.system(size: 34, weight: .semibold))
+          .font(.system(size: 34 * textSize.scale, weight: .semibold))
           .multilineTextAlignment(.center)
           .foregroundStyle(.white)
           .padding(.horizontal, 24)
           .padding(.vertical, 12)
-          .background(.black.opacity(0.72), in: RoundedRectangle(cornerRadius: 12))
+          .background(.black.opacity(backgroundOpacity), in: RoundedRectangle(cornerRadius: 12))
           .shadow(radius: 6)
           .frame(maxWidth: 1_260)
           .accessibilityHidden(true)
       }
     }
-    .padding(.bottom, 92)
+    .padding(.bottom, 92 + (verticalOffset * 320))
     .allowsHitTesting(false)
   }
 }
@@ -410,7 +455,9 @@ private struct ExternalSubtitleOptions: View {
         .font(.headline)
         .foregroundStyle(.secondary)
 
-      Button { select(nil) } label: {
+      Button {
+        select(nil)
+      } label: {
         OptionRow(
           title: String(localized: "playback.subtitles.off"),
           subtitle: nil,
@@ -420,7 +467,9 @@ private struct ExternalSubtitleOptions: View {
       .buttonStyle(.plain)
 
       ForEach(controller.tracks) { track in
-        Button { select(track) } label: {
+        Button {
+          select(track)
+        } label: {
           OptionRow(
             title: track.displayName,
             subtitle: track.addonName,
@@ -442,6 +491,41 @@ private struct ExternalSubtitleOptions: View {
   }
 }
 
+private struct SubtitleTimingControls: View {
+  @ObservedObject var controller: ExternalSubtitleController
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Label("playback.subtitles.timing", systemImage: "timer")
+        .font(.headline)
+        .foregroundStyle(.secondary)
+      HStack(spacing: 12) {
+        Button {
+          controller.adjustTiming(by: -0.5)
+        } label: {
+          Label("-0.5 s", systemImage: "minus")
+        }
+        .buttonStyle(VelyraGlassButtonStyle())
+        Button {
+          controller.setTimingOffset(0)
+        } label: {
+          Text(String(format: "%+.1f s", controller.timingOffset))
+            .monospacedDigit()
+        }
+        .buttonStyle(VelyraGlassButtonStyle())
+        Button {
+          controller.adjustTiming(by: 0.5)
+        } label: {
+          Label("+0.5 s", systemImage: "plus")
+        }
+        .buttonStyle(VelyraGlassButtonStyle())
+      }
+      Text("playback.subtitles.timing.body")
+        .font(.caption)
+        .foregroundStyle(.tertiary)
+    }
+  }
+}
 
 private struct PlaybackDiagnosticsView: View {
   let diagnostics: PlaybackDiagnostics
