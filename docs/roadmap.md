@@ -30,14 +30,14 @@
 
 - [ ] Register Velyra Trakt application credentials
 - [ ] Device activation UI testing
-- [ ] Watchlist read/write
-- [ ] History read/write
-- [ ] Collections
-- [ ] Playback progress
-- [ ] Scrobble start/pause/stop
-- [ ] Offline queue and retry
-- [ ] Rate-limit and token-expiry tests
-- [ ] Reconciliation across multiple devices
+- [x] Watchlist read/write
+- [x] History read/write
+- [x] Collections
+- [x] Playback progress
+- [x] Scrobble start/pause/stop
+- [x] Offline queue and retry
+- [x] Rate-limit and token-expiry handling foundation
+- [x] Local/remote reconciliation and iCloud preference merging
 
 ## Phase 3 — Apple-quality TV experience
 
@@ -47,7 +47,7 @@
 - [x] Top-level focus and section restoration
 - [x] Initial loading, preview and error states
 - [x] Context menus
-- [x] Top Shelf evaluation and extension contract
+- [x] Top Shelf snapshot, deep links and extension implementation
 - [ ] Accessibility audit on hardware
 
 ## Phase 4 — Playback quality
@@ -69,7 +69,8 @@
 - [ ] TestFlight delivery
 - [x] Privacy policy draft
 - [ ] App Store content/legal review
-- [ ] Crash reporting with opt-in privacy controls
+- [x] Privacy-safe local launch-health diagnostics and user-exportable report
+- [ ] Optional external crash reporting, only after provider and privacy review
 
 ## Sprint 1 — Home e descoberta
 

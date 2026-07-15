@@ -37,12 +37,16 @@ targets:
       - path: VelyraTV
         excludes:
           - Resources
+      - path: Shared
     resources:
       - path: VelyraTV/Resources/Localizable.xcstrings
       - path: VelyraTV/Resources/PrivacyInfo.xcprivacy
       - path: VelyraTV/Resources/Media
         excludes:
           - README.md
+    dependencies:
+      - target: VelyraTopShelf
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: pt.ricardosoares.velyra
@@ -52,6 +56,27 @@ targets:
         CODE_SIGN_ENTITLEMENTS: VelyraTV/Resources/VelyraTV.entitlements
         CODE_SIGN_STYLE: Automatic
         ENABLE_USER_SCRIPT_SANDBOXING: YES
+
+  VelyraTopShelf:
+    type: app-extension
+    platform: tvOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: VelyraTopShelf
+        excludes:
+          - Info.plist
+          - VelyraTopShelf.entitlements
+      - path: Shared
+    resources:
+      - path: VelyraTV/Resources/Localizable.xcstrings
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: pt.ricardosoares.velyra.topshelf
+        PRODUCT_NAME: VelyraTopShelf
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: VelyraTopShelf/Info.plist
+        CODE_SIGN_ENTITLEMENTS: VelyraTopShelf/VelyraTopShelf.entitlements
+        SKIP_INSTALL: YES
 
   VelyraTVTests:
     type: bundle.unit-test

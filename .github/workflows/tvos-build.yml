@@ -28,22 +28,41 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
-      - name: Validate configuration files
+      - name: Validate project contracts
         run: |
-          plutil -lint VelyraTV/Resources/Info.plist
-          plutil -lint VelyraTV/Resources/VelyraTV.entitlements
-          plutil -lint VelyraTV/Resources/PrivacyInfo.xcprivacy
-          python3 -m json.tool VelyraTV/Resources/Localizable.xcstrings >/dev/null
+          python3 scripts/validate_project.py
+          swift-format lint --recursive VelyraTV VelyraTVTests Shared VelyraTopShelf
 
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Build app and tests for tvOS Simulator
+      - name: Resolve an available tvOS Simulator
+        id: simulator
+        run: |
+          DEVICE_ID=$(python3 - <<'PY'
+          import json
+          import subprocess
+
+          data = json.loads(subprocess.check_output(["xcrun", "simctl", "list", "devices", "available", "-j"]))
+          for runtime, devices in data.get("devices", {}).items():
+              if "tvOS" not in runtime:
+                  continue
+              for device in devices:
+                  if device.get("isAvailable"):
+                      print(device["udid"])
+                      raise SystemExit(0)
+          raise SystemExit("No available tvOS Simulator found")
+          PY
+          )
+          echo "device_id=$DEVICE_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Build and test on tvOS Simulator
         run: |
           xcodebuild \
             -project Velyra.xcodeproj \
             -scheme VelyraTV \
             -sdk appletvsimulator \
-            -destination 'generic/platform=tvOS Simulator' \
+            -destination "platform=tvOS Simulator,id=${{ steps.simulator.outputs.device_id }}" \
+            -enableCodeCoverage YES \
             CODE_SIGNING_ALLOWED=NO \
-            build-for-testing
+            test

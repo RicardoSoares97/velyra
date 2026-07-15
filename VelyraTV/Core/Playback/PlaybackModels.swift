@@ -1,24 +1,33 @@
 import Foundation
 
 struct PlaybackRequest: Equatable, Sendable {
+  let contentKey: String
   let title: String
   let originalLanguageCode: String?
   let sources: [PlaybackSource]
   let externalSubtitles: [ExternalSubtitleTrack]
   let initialPosition: TimeInterval
+  let initialProgress: Double?
+  let traktContext: TraktPlaybackContext?
 
   init(
+    contentKey: String? = nil,
     title: String,
     originalLanguageCode: String? = nil,
     sources: [PlaybackSource],
     externalSubtitles: [ExternalSubtitleTrack] = [],
-    initialPosition: TimeInterval = 0
+    initialPosition: TimeInterval = 0,
+    initialProgress: Double? = nil,
+    traktContext: TraktPlaybackContext? = nil
   ) {
+    self.contentKey = contentKey ?? title.lowercased()
     self.title = title
     self.originalLanguageCode = originalLanguageCode
     self.sources = sources
     self.externalSubtitles = externalSubtitles
     self.initialPosition = max(0, initialPosition)
+    self.initialProgress = initialProgress.map { min(max($0, 0), 100) }
+    self.traktContext = traktContext
   }
 }
 

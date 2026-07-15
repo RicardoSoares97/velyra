@@ -95,3 +95,7 @@ Trakt integration requires:
 - reconciliation on app activation;
 - deduplication of start/pause/stop events;
 - final watched-state confirmation near completion.
+
+## Metadata fusion
+
+Rich title metadata is normalized from TMDB and addon metadata, while Trakt remains the source of truth for personal state.

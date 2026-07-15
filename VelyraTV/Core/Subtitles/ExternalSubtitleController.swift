@@ -8,13 +8,15 @@ final class ExternalSubtitleController: ObservableObject {
   @Published private(set) var selectedTrackID: String?
   @Published private(set) var currentText: String?
   @Published private(set) var errorMessage: String?
+  @Published private(set) var timingOffset: TimeInterval = 0
 
   private let service: ExternalSubtitleService
   private weak var player: AVPlayer?
   private var cues: [ExternalSubtitleCue] = []
   private var timeObserver: Any?
+  private var currentCueIndex: Int?
 
-  init(service: ExternalSubtitleService = ExternalSubtitleService()) {
+  init(service: ExternalSubtitleService = .shared) {
     self.service = service
   }
 
@@ -42,11 +44,33 @@ final class ExternalSubtitleController: ObservableObject {
   }
 
   func selectPreferred(languageCode: String) async {
-    let normalized = languageCode.lowercased()
-    let base = normalized.split(separator: "-").first
-    let track = tracks.first(where: { $0.languageCode.lowercased() == normalized })
-      ?? tracks.first(where: { $0.languageCode.lowercased().split(separator: "-").first == base })
-    await select(track)
+    await selectPreferred(languageCodes: [languageCode])
+  }
+
+  func selectPreferred(languageCodes: [String]) async {
+    for languageCode in languageCodes where !languageCode.isEmpty {
+      let normalized = languageCode.lowercased().replacingOccurrences(of: "_", with: "-")
+      let base = normalized.split(separator: "-").first
+      if let track = tracks.first(where: {
+        $0.languageCode.lowercased().replacingOccurrences(of: "_", with: "-") == normalized
+      })
+        ?? tracks.first(where: {
+          $0.languageCode.lowercased().split(separator: "-").first == base
+        })
+      {
+        await select(track)
+        return
+      }
+    }
+  }
+
+  func setTimingOffset(_ value: TimeInterval) {
+    timingOffset = min(max(value, -10), 10)
+    updateText(at: player?.currentTime().seconds ?? 0)
+  }
+
+  func adjustTiming(by delta: TimeInterval) {
+    setTimingOffset(timingOffset + delta)
   }
 
   func select(_ track: ExternalSubtitleTrack?) async {
@@ -54,28 +78,56 @@ final class ExternalSubtitleController: ObservableObject {
     guard let track else {
       selectedTrackID = nil
       cues = []
+      currentCueIndex = nil
       currentText = nil
       return
     }
     do {
       let loaded = try await service.cues(for: track)
       cues = loaded
+      currentCueIndex = nil
       selectedTrackID = track.id
       updateText(at: player?.currentTime().seconds ?? 0)
     } catch {
       selectedTrackID = nil
       cues = []
+      currentCueIndex = nil
       currentText = nil
       errorMessage = error.localizedDescription
     }
   }
 
   private func updateText(at time: TimeInterval) {
-    guard time.isFinite else {
+    guard time.isFinite, !cues.isEmpty else {
+      currentCueIndex = nil
       currentText = nil
       return
     }
-    currentText = cues.first(where: { $0.contains(time) })?.text
+    let adjusted = time + timingOffset
+    if let currentCueIndex, cues.indices.contains(currentCueIndex),
+      cues[currentCueIndex].contains(adjusted)
+    {
+      currentText = cues[currentCueIndex].text
+      return
+    }
+
+    var lower = 0
+    var upper = cues.count - 1
+    var match: Int?
+    while lower <= upper {
+      let middle = (lower + upper) / 2
+      let cue = cues[middle]
+      if adjusted < cue.start {
+        upper = middle - 1
+      } else if adjusted >= cue.end {
+        lower = middle + 1
+      } else {
+        match = middle
+        break
+      }
+    }
+    currentCueIndex = match
+    currentText = match.map { cues[$0].text }
   }
 
   private func removeObserver() {

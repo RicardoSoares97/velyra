@@ -1,6 +1,8 @@
 import Foundation
 
 actor HomeFeedCache {
+  static let shared = HomeFeedCache()
+
   private struct Envelope: Codable, Sendable {
     let savedAt: Date
     let feed: HomeFeed
@@ -46,6 +48,18 @@ actor HomeFeedCache {
     } catch {
       return nil
     }
+  }
+
+  func clear() {
+    guard
+      let root = try? fileManager.url(
+        for: .cachesDirectory,
+        in: .userDomainMask,
+        appropriateFor: nil,
+        create: true
+      )
+    else { return }
+    try? fileManager.removeItem(at: root.appendingPathComponent("Velyra/Home", isDirectory: true))
   }
 
   private func cacheURL(language: String, region: String) throws -> URL {

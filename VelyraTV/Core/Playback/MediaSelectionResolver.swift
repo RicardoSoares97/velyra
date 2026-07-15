@@ -22,13 +22,17 @@ struct MediaSelectionResolver {
     let audio = chooseAudio(
       from: audioGroup,
       originalLanguageCode: originalLanguageCode,
-      preference: preferences.preferredAudioLanguage
+      preference: preferences.preferredAudioLanguage,
+      customLanguageCode: preferences.preferredAudioLanguageCode,
+      secondaryLanguageCode: preferences.secondaryAudioLanguageCode
     )
 
     let subtitles = chooseSubtitles(
       from: subtitleGroup,
-      languageCode: subtitleLanguageCode,
+      regionalLanguageCode: subtitleLanguageCode,
       preference: preferences.preferredSubtitleLanguage,
+      customLanguageCode: preferences.preferredSubtitleLanguageCode,
+      secondaryLanguageCode: preferences.secondarySubtitleLanguageCode,
       enabledByDefault: preferences.subtitlesEnabledByDefault
     )
 
@@ -98,7 +102,9 @@ struct MediaSelectionResolver {
   private func chooseAudio(
     from group: AVMediaSelectionGroup?,
     originalLanguageCode: String?,
-    preference: AudioSelectionPreference
+    preference: AudioSelectionPreference,
+    customLanguageCode: String?,
+    secondaryLanguageCode: String?
   ) -> AVMediaSelectionOption? {
     guard let group else { return nil }
 
@@ -106,18 +112,22 @@ struct MediaSelectionResolver {
       !$0.hasMediaCharacteristic(.describesVideo)
     }
 
-    if preference == .original,
-      let originalLanguageCode,
-      let exact = bestLanguageMatch(in: regularOptions, preferred: originalLanguageCode)
-    {
-      return exact
+    let preferredCodes: [String?]
+    switch preference {
+    case .original:
+      preferredCodes = [originalLanguageCode, customLanguageCode, secondaryLanguageCode]
+    case .system:
+      preferredCodes = [Locale.preferredLanguages.first, secondaryLanguageCode, originalLanguageCode]
+    case .custom:
+      preferredCodes = [customLanguageCode, secondaryLanguageCode, originalLanguageCode]
     }
 
-    if preference == .system,
-      let systemLanguage = Locale.preferredLanguages.first,
-      let system = bestLanguageMatch(in: regularOptions, preferred: systemLanguage)
+    for code in preferredCodes.compactMap({ $0?.trimmingCharacters(in: .whitespacesAndNewlines) })
+      where !code.isEmpty
     {
-      return system
+      if let match = bestLanguageMatch(in: regularOptions, preferred: code) {
+        return match
+      }
     }
 
     return group.defaultOption ?? regularOptions.first ?? group.options.first
@@ -125,32 +135,46 @@ struct MediaSelectionResolver {
 
   private func chooseSubtitles(
     from group: AVMediaSelectionGroup?,
-    languageCode: String,
+    regionalLanguageCode: String,
     preference: SubtitleSelectionPreference,
+    customLanguageCode: String?,
+    secondaryLanguageCode: String?,
     enabledByDefault: Bool
   ) -> AVMediaSelectionOption? {
     guard enabledByDefault, preference != .off, let group else { return nil }
 
-    let target =
-      preference == .system
-      ? (Locale.preferredLanguages.first ?? languageCode)
-      : languageCode
+    let primary: String?
+    switch preference {
+    case .region:
+      primary = regionalLanguageCode
+    case .system:
+      primary = Locale.preferredLanguages.first ?? regionalLanguageCode
+    case .custom:
+      primary = customLanguageCode
+    case .off:
+      primary = nil
+    }
 
     let fullSubtitles = group.options.filter {
       !$0.hasMediaCharacteristic(.containsOnlyForcedSubtitles)
     }
-
-    if let regular = bestLanguageMatch(
-      in: fullSubtitles.filter {
-        !$0.hasMediaCharacteristic(.describesMusicAndSound)
-          && !$0.hasMediaCharacteristic(.transcribesSpokenDialog)
-      },
-      preferred: target
-    ) {
-      return regular
+    let regularSubtitles = fullSubtitles.filter {
+      !$0.hasMediaCharacteristic(.describesMusicAndSound)
+        && !$0.hasMediaCharacteristic(.transcribesSpokenDialog)
     }
 
-    return bestLanguageMatch(in: fullSubtitles, preferred: target)
+    for code in [primary, secondaryLanguageCode].compactMap({ $0?.trimmingCharacters(in: .whitespacesAndNewlines) })
+      where !code.isEmpty
+    {
+      if let regular = bestLanguageMatch(in: regularSubtitles, preferred: code) {
+        return regular
+      }
+      if let accessible = bestLanguageMatch(in: fullSubtitles, preferred: code) {
+        return accessible
+      }
+    }
+
+    return nil
   }
 
   private func bestLanguageMatch(

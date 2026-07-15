@@ -140,7 +140,7 @@ The entitlements expect this container:
 iCloud.pt.ricardosoares.velyra
 ```
 
-Lightweight preferences are mirrored through `NSUbiquitousKeyValueStore`. The architecture reserves private CloudKit records for larger user-owned state. Velyra does not receive the Apple ID email or password.
+Lightweight preferences are mirrored through `NSUbiquitousKeyValueStore`, while a private CloudKit record stores the complete user-owned settings state and per-content playback preferences. Conflicts merge by settings domain and timestamp. Velyra does not receive the Apple ID email or password.
 
 ## Media assets
 
@@ -157,3 +157,18 @@ Copyrighted series or film clips must never be committed without explicit rights
 ## Licensing boundary
 
 This repository is an independent clean-room foundation. Do not copy GPL-licensed Nuvio source code into it unless the distribution and licensing strategy is deliberately changed to comply with GPLv3.
+
+## Product-completion status
+
+The source now includes the complete non-IMDb product foundation: paginated Trakt library and mutations, offline queue with connectivity recovery, Search and Library filters, rich Details, shared addon health and transfer, private CloudKit state with conflict-safe resets, bounded metadata enrichment, image and TMDB response caching, diagnostics, Home personalisation, smart playback, external text subtitles and a Top Shelf extension.
+
+Implementation completeness is not the same as Apple-platform validation. See `docs/release-readiness.md` for the exact split between source work, external credentials and tasks deliberately deferred until a Mac/Xcode and Apple TV are available.
+
+Additional operating contracts:
+
+- `docs/data-sources.md`
+- `docs/performance.md`
+- `docs/trakt-integration.md`
+- `docs/top-shelf.md`
+- `docs/release-readiness.md`
+- `docs/feature-matrix.md`

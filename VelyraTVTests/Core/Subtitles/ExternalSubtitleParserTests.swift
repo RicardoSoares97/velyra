@@ -37,4 +37,20 @@ final class ExternalSubtitleParserTests: XCTestCase {
     XCTAssertEqual(cues[0].start, 2, accuracy: 0.001)
     XCTAssertEqual(cues[0].end, 4.25, accuracy: 0.001)
   }
+
+  func testParsesBasicASSDialogue() {
+    let cues = ExternalSubtitleParser.parseASS(
+      """
+      [Events]
+      Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+      Dialogue: 0,0:00:01.20,0:00:03.40,Default,,0,0,0,,{\\i1}Olá{\\i0}\\NPortugal
+      """
+    )
+
+    XCTAssertEqual(cues.count, 1)
+    XCTAssertEqual(cues[0].start, 1.2, accuracy: 0.001)
+    XCTAssertEqual(cues[0].end, 3.4, accuracy: 0.001)
+    XCTAssertEqual(cues[0].text, "Olá\nPortugal")
+  }
+
 }

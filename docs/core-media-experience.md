@@ -16,7 +16,7 @@ This feature connects discovery to playback without expanding the Trakt roadmap:
 
 The resolver uses identifiers in this order:
 
-1. IMDb (`tt...`), when available;
+1. Stable external `tt...` identifier, when provided by metadata;
 2. TMDB (`tmdb:<id>`);
 3. the original addon identifier.
 
