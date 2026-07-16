@@ -29,7 +29,7 @@ final class ExternalSubtitleController: ObservableObject {
     self.cueLoader = cueLoader
   }
 
-  deinit {
+  isolated deinit {
     if let timeObserver, let player {
       player.removeTimeObserver(timeObserver)
     }

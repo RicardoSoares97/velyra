@@ -12,6 +12,13 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
 class ValidateProjectSpecTests(unittest.TestCase):
+    def test_external_subtitle_controller_isolates_deinit(self) -> None:
+        source = (
+            REPOSITORY_ROOT / "VelyraTV/Core/Subtitles/ExternalSubtitleController.swift"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("isolated deinit {", source)
+
     def test_top_shelf_provider_matches_async_sdk_contract(self) -> None:
         source = (REPOSITORY_ROOT / "VelyraTopShelf/ContentProvider.swift").read_text(
             encoding="utf-8"
