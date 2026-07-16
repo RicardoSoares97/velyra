@@ -4,20 +4,29 @@ import Foundation
 
 @MainActor
 final class ExternalSubtitleController: ObservableObject {
+  typealias CueLoader = @MainActor (ExternalSubtitleTrack) async throws -> [ExternalSubtitleCue]
+
   @Published private(set) var tracks: [ExternalSubtitleTrack] = []
   @Published private(set) var selectedTrackID: String?
   @Published private(set) var currentText: String?
   @Published private(set) var errorMessage: String?
   @Published private(set) var timingOffset: TimeInterval = 0
 
-  private let service: ExternalSubtitleService
+  private let cueLoader: CueLoader
   private weak var player: AVPlayer?
   private var cues: [ExternalSubtitleCue] = []
   private var timeObserver: Any?
   private var currentCueIndex: Int?
+  private var selectionGeneration = 0
 
   init(service: ExternalSubtitleService = .shared) {
-    self.service = service
+    cueLoader = { track in
+      try await service.cues(for: track)
+    }
+  }
+
+  init(cueLoader: @escaping CueLoader) {
+    self.cueLoader = cueLoader
   }
 
   deinit {
@@ -28,6 +37,7 @@ final class ExternalSubtitleController: ObservableObject {
 
   func configure(tracks: [ExternalSubtitleTrack], player: AVPlayer, preferredLanguage: String?) {
     removeObserver()
+    invalidateSelection()
     self.tracks = tracks
     self.player = player
     timeObserver = player.addPeriodicTimeObserver(
@@ -74,25 +84,22 @@ final class ExternalSubtitleController: ObservableObject {
   }
 
   func select(_ track: ExternalSubtitleTrack?) async {
+    let generation = beginSelection()
     errorMessage = nil
     guard let track else {
-      selectedTrackID = nil
-      cues = []
-      currentCueIndex = nil
-      currentText = nil
+      clearSelection()
       return
     }
     do {
-      let loaded = try await service.cues(for: track)
+      let loaded = try await cueLoader(track)
+      guard generation == selectionGeneration else { return }
       cues = loaded
       currentCueIndex = nil
       selectedTrackID = track.id
       updateText(at: player?.currentTime().seconds ?? 0)
     } catch {
-      selectedTrackID = nil
-      cues = []
-      currentCueIndex = nil
-      currentText = nil
+      guard generation == selectionGeneration else { return }
+      clearSelection()
       errorMessage = error.localizedDescription
     }
   }
@@ -135,5 +142,23 @@ final class ExternalSubtitleController: ObservableObject {
       player.removeTimeObserver(timeObserver)
     }
     timeObserver = nil
+  }
+
+  private func beginSelection() -> Int {
+    selectionGeneration &+= 1
+    return selectionGeneration
+  }
+
+  private func invalidateSelection() {
+    _ = beginSelection()
+    errorMessage = nil
+    clearSelection()
+  }
+
+  private func clearSelection() {
+    selectedTrackID = nil
+    cues = []
+    currentCueIndex = nil
+    currentText = nil
   }
 }

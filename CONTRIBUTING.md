@@ -37,6 +37,11 @@ chore: update tvOS workflow
 - UI changes must document focus and accessibility behaviour.
 - Every PR must complete `.github/PULL_REQUEST_TEMPLATE.md`.
 - `docs/apple-platform-standards.md` is a mandatory acceptance contract.
+- Every release-facing PR must have at least one release-note category label:
+  `feature`, `enhancement`, `bug`, `fix`, `accessibility`, `performance`,
+  `documentation`, `dependencies`, `maintenance`, or `ci`.
+- Use `skip-changelog` only when a change has no user or release-operator impact.
+  Unlabelled PRs remain visible under `Other changes` rather than being omitted.
 
 ## Rules
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct SearchView: View {
   @EnvironmentObject private var appState: AppState
@@ -34,6 +35,9 @@ struct SearchView: View {
       do { try await Task.sleep(for: .milliseconds(350)) } catch { return }
       guard !Task.isCancelled else { return }
       await performSearch(saveToHistory: false)
+    }
+    .onChange(of: viewModel.state) { _, state in
+      postQueuedAccessibilityAnnouncement(accessibilityAnnouncement(for: state))
     }
     .fullScreenCover(item: $selectedItem) { item in
       MediaDetailsView(item: item).environmentObject(appState)
@@ -153,7 +157,6 @@ struct SearchView: View {
       }
       .foregroundStyle(.white)
       .accessibilityElement(children: .combine)
-      .accessibilityLiveRegion(.polite)
     case .empty:
       emptyView(
         title: "search.empty.title", body: String(localized: "search.empty.body"),
@@ -222,10 +225,35 @@ struct SearchView: View {
       saveToHistory: saveToHistory && appState.preferences.searchHistoryEnabled
     )
   }
+
+  private func accessibilityAnnouncement(for state: SearchViewModel.State) -> String? {
+    switch state {
+    case .empty:
+      String(localized: "search.empty.body")
+    case .failed(let message):
+      message
+    case .idle, .searching, .results:
+      nil
+    }
+  }
 }
 
 private struct SearchTaskID: Hashable {
   let query: String
   let kind: SearchViewModel.KindFilter
   let sort: SearchViewModel.Sort
+}
+
+@MainActor
+private func postQueuedAccessibilityAnnouncement(_ message: String?) {
+  guard let message, !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+    return
+  }
+  let announcement = NSMutableAttributedString(string: message)
+  announcement.addAttribute(
+    .accessibilitySpeechQueueAnnouncement,
+    value: true,
+    range: NSRange(location: 0, length: announcement.length)
+  )
+  UIAccessibility.post(notification: .announcement, argument: announcement)
 }

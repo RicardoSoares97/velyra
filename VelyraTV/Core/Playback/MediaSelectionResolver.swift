@@ -2,11 +2,28 @@ import AVFoundation
 import Foundation
 
 struct MediaSelectionResolver {
+  typealias GroupLoader =
+    @MainActor (
+      _ asset: AVAsset,
+      _ characteristic: AVMediaCharacteristic
+    ) async throws -> AVMediaSelectionGroup?
+
   struct ResolvedSelection {
     let audio: AVMediaSelectionOption?
     let subtitles: AVMediaSelectionOption?
   }
 
+  private let groupLoader: GroupLoader
+
+  init(
+    groupLoader: @escaping GroupLoader = { asset, characteristic in
+      try await asset.loadMediaSelectionGroup(for: characteristic)
+    }
+  ) {
+    self.groupLoader = groupLoader
+  }
+
+  @MainActor
   func resolve(
     item: AVPlayerItem,
     originalLanguageCode: String?,
@@ -14,10 +31,8 @@ struct MediaSelectionResolver {
     preferences: AppPreferences
   ) async throws -> ResolvedSelection {
     let asset = item.asset
-    _ = try await asset.load(.availableMediaCharacteristicsWithMediaSelectionOptions)
-
-    let audioGroup = asset.mediaSelectionGroup(forMediaCharacteristic: .audible)
-    let subtitleGroup = asset.mediaSelectionGroup(forMediaCharacteristic: .legible)
+    let audioGroup = try? await groupLoader(asset, .audible)
+    let subtitleGroup = try? await groupLoader(asset, .legible)
 
     let audio = chooseAudio(
       from: audioGroup,
@@ -71,9 +86,9 @@ struct MediaSelectionResolver {
         languageCode: normalizedLanguageCode(for: option),
         isSelected: option == selected,
         isOff: false,
-        isAccessibilityTrack: option.hasMediaCharacteristic(.describesVideo)
-          || option.hasMediaCharacteristic(.describesMusicAndSound)
-          || option.hasMediaCharacteristic(.transcribesSpokenDialog)
+        isAccessibilityTrack: option.hasMediaCharacteristic(.describesVideoForAccessibility)
+          || option.hasMediaCharacteristic(.describesMusicAndSoundForAccessibility)
+          || option.hasMediaCharacteristic(.transcribesSpokenDialogForAccessibility)
       )
     }
 
@@ -109,7 +124,7 @@ struct MediaSelectionResolver {
     guard let group else { return nil }
 
     let regularOptions = group.options.filter {
-      !$0.hasMediaCharacteristic(.describesVideo)
+      !$0.hasMediaCharacteristic(.describesVideoForAccessibility)
     }
 
     let preferredCodes: [String?]
@@ -117,14 +132,15 @@ struct MediaSelectionResolver {
     case .original:
       preferredCodes = [originalLanguageCode, customLanguageCode, secondaryLanguageCode]
     case .system:
-      preferredCodes = [Locale.preferredLanguages.first, secondaryLanguageCode, originalLanguageCode]
+      preferredCodes = [
+        Locale.preferredLanguages.first, secondaryLanguageCode, originalLanguageCode,
+      ]
     case .custom:
       preferredCodes = [customLanguageCode, secondaryLanguageCode, originalLanguageCode]
     }
 
     for code in preferredCodes.compactMap({ $0?.trimmingCharacters(in: .whitespacesAndNewlines) })
-      where !code.isEmpty
-    {
+    where !code.isEmpty {
       if let match = bestLanguageMatch(in: regularOptions, preferred: code) {
         return match
       }
@@ -159,13 +175,14 @@ struct MediaSelectionResolver {
       !$0.hasMediaCharacteristic(.containsOnlyForcedSubtitles)
     }
     let regularSubtitles = fullSubtitles.filter {
-      !$0.hasMediaCharacteristic(.describesMusicAndSound)
-        && !$0.hasMediaCharacteristic(.transcribesSpokenDialog)
+      !$0.hasMediaCharacteristic(.describesMusicAndSoundForAccessibility)
+        && !$0.hasMediaCharacteristic(.transcribesSpokenDialogForAccessibility)
     }
 
-    for code in [primary, secondaryLanguageCode].compactMap({ $0?.trimmingCharacters(in: .whitespacesAndNewlines) })
-      where !code.isEmpty
-    {
+    for code in [primary, secondaryLanguageCode].compactMap({
+      $0?.trimmingCharacters(in: .whitespacesAndNewlines)
+    })
+    where !code.isEmpty {
       if let regular = bestLanguageMatch(in: regularSubtitles, preferred: code) {
         return regular
       }

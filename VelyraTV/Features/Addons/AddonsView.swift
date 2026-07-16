@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct AddonsView: View {
   @EnvironmentObject private var appState: AppState
@@ -50,6 +51,18 @@ struct AddonsView: View {
       Button("action.cancel", role: .cancel) {}
     } message: {
       Text("addons.removeAll.body")
+    }
+    .onChange(of: viewModel.state) { _, state in
+      switch state {
+      case .success(let name):
+        postQueuedAccessibilityAnnouncement(
+          name + " · " + String(localized: "addons.added")
+        )
+      case .failed(let message):
+        postQueuedAccessibilityAnnouncement(message)
+      case .idle, .loading:
+        break
+      }
     }
   }
 
@@ -104,11 +117,9 @@ struct AddonsView: View {
     case .success(let name):
       Label(name + " · " + String(localized: "addons.added"), systemImage: "checkmark.circle.fill")
         .foregroundStyle(.white)
-        .accessibilityLiveRegion(.polite)
     case .failed(let message):
       Label(message, systemImage: "exclamationmark.triangle.fill")
         .foregroundStyle(.white)
-        .accessibilityLiveRegion(.assertive)
     }
   }
 
@@ -311,7 +322,7 @@ private struct AddonTransferSheet: View {
           .padding(20)
           .velyraGlass(cornerRadius: 20, interactive: true)
         if let message {
-          Text(message).foregroundStyle(.white.opacity(0.74)).accessibilityLiveRegion(.polite)
+          Text(message).foregroundStyle(.white.opacity(0.74))
         }
         HStack(spacing: 16) {
           Button("action.close", action: onClose)
@@ -326,5 +337,21 @@ private struct AddonTransferSheet: View {
       .velyraGlass(cornerRadius: 34)
     }
     .onExitCommand(perform: onClose)
+    .onChange(of: message) { _, message in
+      guard let message else { return }
+      postQueuedAccessibilityAnnouncement(message)
+    }
   }
+}
+
+@MainActor
+private func postQueuedAccessibilityAnnouncement(_ message: String) {
+  guard !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+  let announcement = NSMutableAttributedString(string: message)
+  announcement.addAttribute(
+    .accessibilitySpeechQueueAnnouncement,
+    value: true,
+    range: NSRange(location: 0, length: announcement.length)
+  )
+  UIAccessibility.post(notification: .announcement, argument: announcement)
 }

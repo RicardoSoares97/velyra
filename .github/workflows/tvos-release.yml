@@ -1,0 +1,164 @@
+name: tvOS Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tvos-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-26
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Verify Xcode and tvOS SDKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          sw_vers
+          xcodebuild -version
+          xcodebuild -showsdks | tee "$RUNNER_TEMP/xcode-sdks.txt"
+          grep -q 'appletvos' "$RUNNER_TEMP/xcode-sdks.txt"
+          grep -q 'appletvsimulator' "$RUNNER_TEMP/xcode-sdks.txt"
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Validate release metadata and main ancestry
+        id: release_meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG=${GITHUB_REF_NAME}
+          VERSION=$(python3 scripts/validate_release.py --tag "$TAG" --project project.yml)
+          COMMIT=$(git rev-parse HEAD)
+          git fetch origin main
+          git merge-base --is-ancestor "$COMMIT" origin/main || {
+            echo "ERROR: release tag commit is not reachable from main" >&2
+            exit 1
+          }
+          {
+            echo "tag=$TAG"
+            echo "version=$VERSION"
+            echo "commit=$COMMIT"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Require distributed native-client configuration
+        shell: bash
+        env:
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
+          TMDB_READ_ACCESS_TOKEN: ${{ secrets.TMDB_READ_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$TRAKT_CLIENT_ID" || { echo "ERROR: required TRAKT_CLIENT_ID secret is empty" >&2; exit 1; }
+          test -n "$TRAKT_CLIENT_SECRET" || { echo "ERROR: required TRAKT_CLIENT_SECRET secret is empty" >&2; exit 1; }
+          test -n "$TMDB_READ_ACCESS_TOKEN" || { echo "ERROR: required TMDB_READ_ACCESS_TOKEN secret is empty" >&2; exit 1; }
+          {
+            echo '### Native-client configuration'
+            echo 'Required provider configuration is present. These values are compiled into the IPA, are recoverable from it, and must belong to a restricted, monitored, rotatable distributed native client.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Independently validate, test, and build release
+        shell: bash
+        env:
+          SIDELOAD_OUTPUT_DIR: ${{ runner.temp }}/velyra-release
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
+          TMDB_READ_ACCESS_TOKEN: ${{ secrets.TMDB_READ_ACCESS_TOKEN }}
+        run: scripts/ci_validate_tvos.sh
+
+      - name: Version release artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/velyra-release"
+          VERSION='${{ steps.release_meta.outputs.version }}'
+          mv "$OUT/Velyra-sideload.ipa" "$OUT/Velyra-sideload-v$VERSION.ipa"
+          (
+            cd "$OUT"
+            shasum -a 256 "Velyra-sideload-v$VERSION.ipa" \
+              > "Velyra-sideload-v$VERSION.ipa.sha256"
+          )
+          rm -f "$OUT/Velyra-sideload.ipa.sha256"
+          test -s "$OUT/Velyra-sideload-v$VERSION.ipa"
+          test -s "$OUT/Velyra-sideload-v$VERSION.ipa.sha256"
+
+      - name: Generate Markdown changelog
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/velyra-release"
+          TAG='${{ steps.release_meta.outputs.tag }}'
+          gh api --method POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+            -f tag_name="$TAG" \
+            -f target_commitish='${{ steps.release_meta.outputs.commit }}' \
+            --jq .body > "$OUT/CHANGELOG-$TAG.md"
+          test -s "$OUT/CHANGELOG-$TAG.md"
+
+      - name: Create or resume draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/velyra-release"
+          TAG='${{ steps.release_meta.outputs.tag }}'
+          VERSION='${{ steps.release_meta.outputs.version }}'
+          if IS_DRAFT=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null); then
+            test "$IS_DRAFT" = true || {
+              echo "ERROR: release $TAG already exists and is public; refusing to overwrite it" >&2
+              exit 1
+            }
+          else
+            gh release create "$TAG" --verify-tag --draft \
+              --title "Velyra $VERSION" \
+              --notes-file "$OUT/CHANGELOG-$TAG.md"
+          fi
+
+      - name: Upload and verify exactly three release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/velyra-release"
+          TAG='${{ steps.release_meta.outputs.tag }}'
+          VERSION='${{ steps.release_meta.outputs.version }}'
+          gh release upload "$TAG" \
+            "$OUT/Velyra-sideload-v$VERSION.ipa" \
+            "$OUT/Velyra-sideload-v$VERSION.ipa.sha256" \
+            "$OUT/CHANGELOG-$TAG.md" \
+            --clobber
+          printf '%s\n' \
+            "CHANGELOG-$TAG.md" \
+            "Velyra-sideload-v$VERSION.ipa" \
+            "Velyra-sideload-v$VERSION.ipa.sha256" | sort \
+            > "$RUNNER_TEMP/expected-assets.txt"
+          gh release view "$TAG" --json assets --jq '.assets[].name' | sort \
+            > "$RUNNER_TEMP/actual-assets.txt"
+          diff -u "$RUNNER_TEMP/expected-assets.txt" "$RUNNER_TEMP/actual-assets.txt"
+
+      - name: Publish verified release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG='${{ steps.release_meta.outputs.tag }}'
+          gh release edit "$TAG" --draft=false --latest
+          URL=$(gh release view "$TAG" --json url --jq .url)
+          printf 'Published release: %s\n' "$URL" >> "$GITHUB_STEP_SUMMARY"

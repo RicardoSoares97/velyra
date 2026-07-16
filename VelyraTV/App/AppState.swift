@@ -9,7 +9,8 @@ final class AppState: ObservableObject {
   @Published private(set) var cloudSyncError: String?
   @Published var deepLinkedItem: MediaItem?
 
-  let iCloudAccount = ICloudAccountMonitor()
+  let distributionCapabilities: DistributionCapabilities
+  let iCloudAccount: ICloudAccountMonitor
   let traktSession = TraktSession()
   let launchHealth = LaunchHealthMonitor.shared
   let networkStatus = NetworkStatusMonitor()
@@ -25,23 +26,43 @@ final class AppState: ObservableObject {
   private var networkObservation: AnyCancellable?
 
   init(
-    preferencesStore: any PreferencesStore = ICloudPreferencesStore(),
-    cloudUserStore: any CloudUserStateStoring = CloudKitUserStateStore()
+    distributionCapabilities: DistributionCapabilities = .current,
+    preferencesStore: (any PreferencesStore)? = nil,
+    cloudUserStore: (any CloudUserStateStoring)? = nil,
+    iCloudAccount: ICloudAccountMonitor? = nil
   ) {
-    self.preferencesStore = preferencesStore
-    self.cloudUserStore = cloudUserStore
+    self.distributionCapabilities = distributionCapabilities
+    if let preferencesStore {
+      self.preferencesStore = preferencesStore
+    } else if distributionCapabilities.supportsICloudPreferences {
+      self.preferencesStore = ICloudPreferencesStore()
+    } else {
+      self.preferencesStore = LocalPreferencesStore()
+    }
+    if let cloudUserStore {
+      self.cloudUserStore = cloudUserStore
+    } else if distributionCapabilities.supportsCloudKit {
+      self.cloudUserStore = CloudKitUserStateStore()
+    } else {
+      self.cloudUserStore = LocalUserStateStore()
+    }
+    self.iCloudAccount =
+      iCloudAccount
+      ?? (distributionCapabilities.supportsCloudKit ? ICloudAccountMonitor() : .localOnly())
     traktObservation = traktSession.objectWillChange.sink { [weak self] _ in
       self?.objectWillChange.send()
     }
 
-    iCloudObservation = NotificationCenter.default
-      .publisher(
-        for: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-        object: NSUbiquitousKeyValueStore.default
-      )
-      .sink { [weak self] _ in
-        Task { @MainActor in await self?.reloadPreferencesFromStore() }
-      }
+    if distributionCapabilities.supportsICloudPreferences {
+      iCloudObservation = NotificationCenter.default
+        .publisher(
+          for: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+          object: NSUbiquitousKeyValueStore.default
+        )
+        .sink { [weak self] _ in
+          Task { @MainActor in await self?.reloadPreferencesFromStore() }
+        }
+    }
 
     memoryWarningObservation = NotificationCenter.default
       .publisher(for: UIApplication.didReceiveMemoryWarningNotification)
@@ -70,22 +91,37 @@ final class AppState: ObservableObject {
     preferences = loadedPreferences
     cloudState = .initial(preferences: loadedPreferences)
 
-    await iCloudAccount.refresh()
-    if loadedPreferences.iCloudSyncEnabled, iCloudAccount.status == .available {
+    if !distributionCapabilities.supportsCloudKit {
       do {
-        if var remote = try await cloudUserStore.load() {
-          remote.preferences.normalize()
-          let merged = cloudState.merging(with: remote)
-          cloudState = merged
-          preferences = merged.preferences
-          await preferencesStore.save(merged.preferences)
-          try await cloudUserStore.save(merged)
+        if var local = try await cloudUserStore.load() {
+          local.preferences.normalize()
+          cloudState = local
+          preferences = local.preferences
         } else {
-          try await persistCloudState()
+          try await cloudUserStore.save(cloudState)
         }
         cloudSyncError = nil
       } catch {
         cloudSyncError = error.localizedDescription
+      }
+    } else {
+      await iCloudAccount.refresh()
+      if loadedPreferences.iCloudSyncEnabled, iCloudAccount.status == .available {
+        do {
+          if var remote = try await cloudUserStore.load() {
+            remote.preferences.normalize()
+            let merged = cloudState.merging(with: remote)
+            cloudState = merged
+            preferences = merged.preferences
+            await preferencesStore.save(merged.preferences)
+            try await cloudUserStore.save(merged)
+          } else {
+            try await persistCloudState()
+          }
+          cloudSyncError = nil
+        } catch {
+          cloudSyncError = error.localizedDescription
+        }
       }
     }
 
@@ -104,12 +140,16 @@ final class AppState: ObservableObject {
     switch phase {
     case .active:
       await launchHealth.beginSession()
-      await iCloudAccount.refresh()
+      if distributionCapabilities.supportsCloudKit {
+        await iCloudAccount.refresh()
+      }
       await traktSession.refreshProfile()
       if traktSession.isConnected {
         _ = try? await traktLibraryRepository.refresh(force: false)
       }
-      if preferences.iCloudSyncEnabled, iCloudAccount.status == .available {
+      if distributionCapabilities.supportsCloudKit, preferences.iCloudSyncEnabled,
+        iCloudAccount.status == .available
+      {
         await refreshCloudState()
       }
     case .inactive:
@@ -202,6 +242,7 @@ final class AppState: ObservableObject {
   }
 
   func syncCloudNow() async {
+    guard distributionCapabilities.supportsCloudKit else { return }
     await iCloudAccount.refresh()
     guard preferences.iCloudSyncEnabled, iCloudAccount.status == .available else { return }
     await refreshCloudState()
@@ -216,6 +257,9 @@ final class AppState: ObservableObject {
     do {
       try await cloudUserStore.delete()
       cloudState = .initial(preferences: preferences)
+      if !distributionCapabilities.supportsCloudKit {
+        try await cloudUserStore.save(cloudState)
+      }
       cloudSyncError = nil
     } catch {
       cloudSyncError = error.localizedDescription
@@ -257,6 +301,14 @@ final class AppState: ObservableObject {
     preferences = .defaults
     cloudState = .initial(preferences: .defaults)
     await preferencesStore.save(.defaults)
+    if !distributionCapabilities.supportsCloudKit {
+      do {
+        try await cloudUserStore.save(cloudState)
+        cloudSyncError = nil
+      } catch {
+        cloudSyncError = error.localizedDescription
+      }
+    }
   }
 
   private func reloadPreferencesFromStore() async {
@@ -270,6 +322,7 @@ final class AppState: ObservableObject {
   }
 
   private func refreshCloudState() async {
+    guard distributionCapabilities.supportsCloudKit else { return }
     do {
       guard var remote = try await cloudUserStore.load() else { return }
       remote.preferences.normalize()
@@ -296,8 +349,12 @@ final class AppState: ObservableObject {
   }
 
   private func persistCloudState() async throws {
-    guard preferences.iCloudSyncEnabled, iCloudAccount.status == .available else { return }
     cloudState.preferences = preferences
+    if !distributionCapabilities.supportsCloudKit {
+      try await cloudUserStore.save(cloudState)
+      return
+    }
+    guard preferences.iCloudSyncEnabled, iCloudAccount.status == .available else { return }
     try await cloudUserStore.save(cloudState)
     cloudSyncError = nil
   }

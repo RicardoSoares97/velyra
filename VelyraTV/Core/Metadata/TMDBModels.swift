@@ -195,9 +195,21 @@ struct TMDBVideo: Decodable, Identifiable, Sendable {
     case publishedAt = "published_at"
   }
 
-  var externalURL: URL? {
-    guard site.caseInsensitiveCompare("YouTube") == .orderedSame else { return nil }
-    return URL(string: "https://www.youtube.com/watch?v=\(key)")
+  var supportedOfficialTrailerURL: URL? {
+    guard official == true,
+      type.caseInsensitiveCompare("Trailer") == .orderedSame,
+      site.caseInsensitiveCompare("YouTube") == .orderedSame
+    else { return nil }
+
+    let trimmedKey = key.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmedKey.isEmpty else { return nil }
+
+    var components = URLComponents()
+    components.scheme = "https"
+    components.host = "www.youtube.com"
+    components.path = "/watch"
+    components.queryItems = [URLQueryItem(name: "v", value: trimmedKey)]
+    return components.url
   }
 }
 

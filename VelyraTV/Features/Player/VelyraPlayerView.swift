@@ -259,7 +259,8 @@ private struct PlayerOptionsPanel: View {
         }
         .padding(34)
       }
-      .frame(width: 610, maxHeight: 780)
+      .frame(width: 610)
+      .frame(maxHeight: 780)
       .velyraGlass(cornerRadius: 34)
       .padding(.trailing, 60)
     }

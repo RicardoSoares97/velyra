@@ -138,9 +138,10 @@ actor TraktLibraryRepository {
       token: token,
       fallback: cached.listItems
     )
+    let sessionProfile = await session.profile
 
     let snapshot = TraktLibrarySnapshot(
-      profile: settings?.user ?? await session.profile ?? cached.profile,
+      profile: settings?.user ?? sessionProfile ?? cached.profile,
       playback: playback ?? cached.playback,
       watchlistMovies: watchlistMovies ?? cached.watchlistMovies,
       watchlistShows: watchlistShows ?? cached.watchlistShows,
@@ -406,8 +407,8 @@ actor TraktLibraryRepository {
     if error is URLError { return true }
     guard let apiError = error as? TraktAPIClient.APIError else { return false }
     switch apiError {
-    case .unauthorized, .rateLimited, .server: true
-    default: false
+    case .unauthorized, .rateLimited, .server: return true
+    default: return false
     }
   }
 

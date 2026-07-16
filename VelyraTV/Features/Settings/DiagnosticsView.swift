@@ -28,7 +28,6 @@ struct DiagnosticsView: View {
           if let report {
             Text(report.formattedText)
               .font(.system(.body, design: .monospaced))
-              .textSelection(.enabled)
               .foregroundStyle(.white.opacity(0.82))
               .padding(28)
               .frame(maxWidth: .infinity, alignment: .leading)
@@ -49,7 +48,9 @@ struct DiagnosticsView: View {
         .padding(.bottom, 100)
       }
 
-      Button { dismiss() } label: {
+      Button {
+        dismiss()
+      } label: {
         Image(systemName: "xmark").frame(width: 54, height: 54)
       }
       .buttonStyle(VelyraGlassButtonStyle())

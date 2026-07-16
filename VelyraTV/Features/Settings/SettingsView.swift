@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct SettingsView: View {
   @EnvironmentObject private var appState: AppState
@@ -32,6 +33,12 @@ struct SettingsView: View {
     }
     .fullScreenCover(isPresented: $showsDiagnostics) {
       DiagnosticsView().environmentObject(appState)
+    }
+    .onChange(of: cloudMessage) { _, cloudMessage in
+      postQueuedAccessibilityAnnouncement(cloudMessage)
+    }
+    .onChange(of: cacheMessage) { _, cacheMessage in
+      postQueuedAccessibilityAnnouncement(cacheMessage)
     }
   }
 
@@ -276,73 +283,86 @@ struct SettingsView: View {
     }
   }
 
+  @ViewBuilder
   private var syncSection: some View {
-    SettingsCard(titleKey: "settings.icloud", systemImage: "icloud.fill") {
-      SettingsToggle(
-        titleKey: "settings.icloudSync",
-        subtitleKey: "settings.icloudSync.body",
-        isOn: binding(\.iCloudSyncEnabled)
+    if appState.distributionCapabilities.isSideload {
+      SettingsCard(titleKey: "settings.sideload.title", systemImage: "internaldrive.fill") {
+        Text("settings.sideload.body")
+          .font(.headline)
+          .foregroundStyle(.white.opacity(0.72))
+      }
+    } else {
+      SettingsCard(titleKey: "settings.icloud", systemImage: "icloud.fill") {
+        SettingsToggle(
+          titleKey: "settings.icloudSync",
+          subtitleKey: "settings.icloudSync.body",
+          isOn: binding(\.iCloudSyncEnabled)
+        )
+        cloudControls
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var cloudControls: some View {
+    HStack {
+      Label(
+        LocalizedStringKey(appState.iCloudAccount.status.localizedKey),
+        systemImage: appState.iCloudAccount.status == .available
+          ? "checkmark.circle.fill" : "exclamationmark.circle"
       )
-      HStack {
-        Label(
-          LocalizedStringKey(appState.iCloudAccount.status.localizedKey),
-          systemImage: appState.iCloudAccount.status == .available
-            ? "checkmark.circle.fill" : "exclamationmark.circle"
-        )
-        .foregroundStyle(.white)
-        Spacer()
-        Text("icloud.noLoginRequired").foregroundStyle(.white.opacity(0.58))
-      }
-      HStack(spacing: 16) {
-        Button("settings.icloud.syncNow") {
-          Task {
-            await appState.syncCloudNow()
-            cloudMessage =
-              appState.cloudSyncError
-              ?? String(localized: "settings.icloud.syncComplete")
-          }
-        }
-        .buttonStyle(VelyraGlassButtonStyle())
-        .disabled(
-          !appState.preferences.iCloudSyncEnabled
-            || appState.iCloudAccount.status != .available
-        )
-
-        Button("settings.icloud.delete", role: .destructive) {
-          showsCloudDeleteConfirmation = true
-        }
-        .buttonStyle(VelyraGlassButtonStyle())
-
-        if let cloudMessage {
-          Text(cloudMessage)
-            .font(.subheadline)
-            .foregroundStyle(.white.opacity(0.62))
-            .accessibilityLiveRegion(.polite)
+      .foregroundStyle(.white)
+      Spacer()
+      Text("icloud.noLoginRequired").foregroundStyle(.white.opacity(0.58))
+    }
+    HStack(spacing: 16) {
+      Button("settings.icloud.syncNow") {
+        Task {
+          await appState.syncCloudNow()
+          cloudMessage =
+            appState.cloudSyncError
+            ?? String(localized: "settings.icloud.syncComplete")
         }
       }
-      .confirmationDialog(
-        "settings.icloud.delete.title",
-        isPresented: $showsCloudDeleteConfirmation,
-        titleVisibility: .visible
-      ) {
-        Button("settings.icloud.delete.confirm", role: .destructive) {
-          Task {
-            await appState.disableAndDeleteCloudData()
-            cloudMessage =
-              appState.cloudSyncError
-              ?? String(localized: "settings.icloud.delete.done")
-          }
-        }
-        Button("action.cancel", role: .cancel) {}
-      } message: {
-        Text("settings.icloud.delete.body")
-      }
+      .buttonStyle(VelyraGlassButtonStyle())
+      .disabled(
+        !appState.preferences.iCloudSyncEnabled
+          || appState.iCloudAccount.status != .available
+      )
 
-      if let error = appState.cloudSyncError {
-        Label(error, systemImage: "exclamationmark.icloud")
+      Button("settings.icloud.delete", role: .destructive) {
+        showsCloudDeleteConfirmation = true
+      }
+      .buttonStyle(VelyraGlassButtonStyle())
+
+      if let cloudMessage {
+        Text(cloudMessage)
           .font(.subheadline)
-          .foregroundStyle(.yellow)
+          .foregroundStyle(.white.opacity(0.62))
       }
+    }
+    .confirmationDialog(
+      "settings.icloud.delete.title",
+      isPresented: $showsCloudDeleteConfirmation,
+      titleVisibility: .visible
+    ) {
+      Button("settings.icloud.delete.confirm", role: .destructive) {
+        Task {
+          await appState.disableAndDeleteCloudData()
+          cloudMessage =
+            appState.cloudSyncError
+            ?? String(localized: "settings.icloud.delete.done")
+        }
+      }
+      Button("action.cancel", role: .cancel) {}
+    } message: {
+      Text("settings.icloud.delete.body")
+    }
+
+    if let error = appState.cloudSyncError {
+      Label(error, systemImage: "exclamationmark.icloud")
+        .font(.subheadline)
+        .foregroundStyle(.yellow)
     }
   }
 
@@ -365,7 +385,7 @@ struct SettingsView: View {
         }
         .buttonStyle(VelyraGlassButtonStyle())
         if let cacheMessage {
-          Text(cacheMessage).foregroundStyle(.white.opacity(0.62)).accessibilityLiveRegion(.polite)
+          Text(cacheMessage).foregroundStyle(.white.opacity(0.62))
         }
       }
     }
@@ -454,6 +474,20 @@ struct SettingsView: View {
   ].map { CodeOption(id: $0, name: Locale.current.localizedString(forRegionCode: $0) ?? $0) }
 }
 
+@MainActor
+private func postQueuedAccessibilityAnnouncement(_ message: String?) {
+  guard let message, !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+    return
+  }
+  let announcement = NSMutableAttributedString(string: message)
+  announcement.addAttribute(
+    .accessibilitySpeechQueueAnnouncement,
+    value: true,
+    range: NSRange(location: 0, length: announcement.length)
+  )
+  UIAccessibility.post(notification: .announcement, argument: announcement)
+}
+
 private struct CodeOption: Identifiable, Hashable {
   let id: String
   let name: String
@@ -525,9 +559,43 @@ private struct SettingsSlider: View {
     HStack(spacing: 24) {
       Text(LocalizedStringKey(titleKey)).font(.headline).foregroundStyle(.white)
       Spacer()
-      Slider(value: $value, in: range, step: step).frame(width: 300).tint(VelyraTheme.primary)
-      Text(format(value)).font(.headline.monospacedDigit()).foregroundStyle(.white.opacity(0.68))
-        .frame(width: 86, alignment: .trailing)
+      HStack(spacing: 16) {
+        Button {
+          adjustValue(by: -step)
+        } label: {
+          Image(systemName: "minus")
+        }
+        .buttonStyle(VelyraGlassButtonStyle())
+        .disabled(value <= range.lowerBound)
+        .accessibilityLabel(
+          Text("settings.adjust.decrease") + Text(verbatim: " ")
+            + Text(LocalizedStringKey(titleKey))
+        )
+        .accessibilityValue(format(value))
+
+        Text(format(value))
+          .font(.headline.monospacedDigit())
+          .foregroundStyle(.white.opacity(0.68))
+          .frame(width: 86)
+
+        Button {
+          adjustValue(by: step)
+        } label: {
+          Image(systemName: "plus")
+        }
+        .buttonStyle(VelyraGlassButtonStyle())
+        .disabled(value >= range.upperBound)
+        .accessibilityLabel(
+          Text("settings.adjust.increase") + Text(verbatim: " ")
+            + Text(LocalizedStringKey(titleKey))
+        )
+        .accessibilityValue(format(value))
+      }
+      .frame(width: 300)
     }
+  }
+
+  private func adjustValue(by delta: Double) {
+    value = min(max(value + delta, range.lowerBound), range.upperBound)
   }
 }

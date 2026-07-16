@@ -1,15 +1,24 @@
 # Cinematic background media
 
-The app expects optional, silent, licensed MP4 loops with these names:
+The generated `OnboardingFallback` asset is the default static-fallback
+contract for the immersive onboarding component. `ImmersiveOnboardingBackdropView`
+renders it immediately, combines it with native SwiftUI motion when allowed,
+and can layer optional prefetched TMDB side backdrops. Remote metadata or image
+failure leaves the original fallback intact, and no MP4 is required to build
+or run.
 
-- `onboarding-welcome.mp4`
-- `onboarding-personal.mp4`
-- `onboarding-icloud.mp4`
-- `onboarding-trakt.mp4`
-- `onboarding-ready.mp4`
+The currently wired optional loops are the `videoName` values referenced by
+`CinematicBackgroundView`. The app can use these silent MP4 files when the
+project has explicit rights to distribute them:
+
 - `home-featured.mp4`
 - `ambient-shell.mp4`
 - `settings-ambient.mp4`
+- `library-ambient.mp4`
+
+Current onboarding is implemented only by `ImmersiveOnboardingBackdropView`;
+it does not resolve or play an onboarding MP4. Adding such a loop would require
+a future product and rights decision plus an explicit production wiring change.
 
 Requirements:
 
@@ -22,4 +31,6 @@ Requirements:
 - always provide a static fallback image or gradient;
 - test with Reduce Motion, Reduce Transparency and Increase Contrast.
 
-Media files are intentionally not committed to the repository.
+MP4 files are intentionally not committed to the repository. Their absence is
+not a build failure: the rendered static fallback and native-motion design
+already provide the default licensed-safe onboarding experience.
