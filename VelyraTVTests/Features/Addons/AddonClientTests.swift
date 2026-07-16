@@ -20,7 +20,8 @@ final class AddonClientTests: XCTestCase {
       ]
     )
 
-    let request = try XCTUnwrap(await httpClient.lastRequest())
+    let recordedRequest = await httpClient.lastRequest()
+    let request = try XCTUnwrap(recordedRequest)
     XCTAssertEqual(
       request.url?.absoluteString,
       "https://addon.test/catalog/series/popular/genre=Sci-Fi%20%2F%20Drama&search=The%20Last%20of%20Us%20%26%20Friends.json"
@@ -40,7 +41,8 @@ final class AddonClientTests: XCTestCase {
       extras: ["skip": "20", "genre": "Drama"]
     )
 
-    let request = try XCTUnwrap(await httpClient.lastRequest())
+    let recordedRequest = await httpClient.lastRequest()
+    let request = try XCTUnwrap(recordedRequest)
     XCTAssertTrue(request.url?.absoluteString.hasSuffix("/genre=Drama&skip=20.json") == true)
   }
 }

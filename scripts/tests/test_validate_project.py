@@ -12,6 +12,23 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
 class ValidateProjectSpecTests(unittest.TestCase):
+    def test_xctest_autoclosures_do_not_contain_await(self) -> None:
+        offenders: list[str] = []
+        for test_file in (REPOSITORY_ROOT / "VelyraTVTests").rglob("*.swift"):
+            for line_number, line in enumerate(
+                test_file.read_text(encoding="utf-8").splitlines(), start=1
+            ):
+                if "XCT" in line and "await" in line:
+                    offenders.append(
+                        f"{test_file.relative_to(REPOSITORY_ROOT)}:{line_number}"
+                    )
+
+        self.assertEqual(
+            offenders,
+            [],
+            "Evaluate async values before passing them to XCTest autoclosures",
+        )
+
     def test_external_subtitle_controller_isolates_deinit(self) -> None:
         source = (
             REPOSITORY_ROOT / "VelyraTV/Core/Subtitles/ExternalSubtitleController.swift"
