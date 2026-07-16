@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import re
 import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
@@ -12,6 +13,23 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
 class ValidateProjectSpecTests(unittest.TestCase):
+    def test_user_defaults_cleanup_does_not_retain_actor_fixture(self) -> None:
+        offenders: list[str] = []
+        retained_fixture = re.compile(
+            r"let\s+(\w+)\s*=.*UserDefaults\(suiteName:[^\n]+\)[!)]*\n"
+            r"\s*defer\s*\{\s*\1\.removePersistentDomain"
+        )
+        for test_file in (REPOSITORY_ROOT / "VelyraTVTests").rglob("*.swift"):
+            source = test_file.read_text(encoding="utf-8")
+            if retained_fixture.search(source):
+                offenders.append(str(test_file.relative_to(REPOSITORY_ROOT)))
+
+        self.assertEqual(
+            offenders,
+            [],
+            "Create a separate UserDefaults instance for actor input and cleanup",
+        )
+
     def test_xctest_autoclosures_do_not_contain_await(self) -> None:
         offenders: list[str] = []
         for test_file in (REPOSITORY_ROOT / "VelyraTVTests").rglob("*.swift"):

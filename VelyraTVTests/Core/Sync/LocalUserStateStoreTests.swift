@@ -5,9 +5,9 @@ import XCTest
 final class LocalUserStateStoreTests: XCTestCase {
   func testRoundTripAndDelete() async throws {
     let suiteName = "LocalUserStateStoreTests.\(UUID().uuidString)"
-    let suite = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-    defer { suite.removePersistentDomain(forName: suiteName) }
-    let store = LocalUserStateStore(defaults: suite)
+    defer { UserDefaults(suiteName: suiteName)?.removePersistentDomain(forName: suiteName) }
+    let storeDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+    let store = LocalUserStateStore(defaults: storeDefaults)
     let fractionalDate = Date(timeIntervalSince1970: 1_725_000_000.123_456)
     let state = CloudUserState(
       schemaVersion: 2,
@@ -29,13 +29,15 @@ final class LocalUserStateStoreTests: XCTestCase {
 
   func testCorruptPayloadIsDiscarded() async throws {
     let suiteName = "LocalUserStateStoreTests.\(UUID().uuidString)"
-    let suite = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-    defer { suite.removePersistentDomain(forName: suiteName) }
-    suite.set(Data("invalid".utf8), forKey: LocalUserStateStore.storageKey)
+    defer { UserDefaults(suiteName: suiteName)?.removePersistentDomain(forName: suiteName) }
+    let seedDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+    seedDefaults.set(Data("invalid".utf8), forKey: LocalUserStateStore.storageKey)
 
-    let store = LocalUserStateStore(defaults: suite)
+    let storeDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+    let store = LocalUserStateStore(defaults: storeDefaults)
     let discardedState = try await store.load()
     XCTAssertNil(discardedState)
-    XCTAssertNil(suite.data(forKey: LocalUserStateStore.storageKey))
+    let verificationDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+    XCTAssertNil(verificationDefaults.data(forKey: LocalUserStateStore.storageKey))
   }
 }
