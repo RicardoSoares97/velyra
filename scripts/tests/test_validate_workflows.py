@@ -46,6 +46,25 @@ class ValidateWorkflowContractTests(unittest.TestCase):
             "action must use an immutable 40-character SHA",
         )
 
+    def test_requires_xcode_toolchain_swift_format_on_path(self) -> None:
+        build = self.build.replace(
+            "xcrun --find swift-format", "command -v swift-format", 1
+        )
+        self.assert_contract_failure(
+            build,
+            self.release,
+            "tvOS build workflow missing required contract: xcrun --find swift-format",
+        )
+
+        release = self.release.replace(
+            "xcrun --find swift-format", "command -v swift-format", 1
+        )
+        self.assert_contract_failure(
+            self.build,
+            release,
+            "tvOS release workflow missing required contract: xcrun --find swift-format",
+        )
+
     def test_rejects_publish_before_upload(self) -> None:
         release = self.release.replace(
             "gh release upload",

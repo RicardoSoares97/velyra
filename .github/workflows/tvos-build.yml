@@ -41,6 +41,14 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
+      - name: Expose Xcode toolchain utilities
+        shell: bash
+        run: |
+          set -euo pipefail
+          SWIFT_FORMAT_BIN=$(xcrun --find swift-format)
+          SWIFT_FORMAT_DIR=$(dirname "$SWIFT_FORMAT_BIN")
+          printf '%s\n' "$SWIFT_FORMAT_DIR" >> "$GITHUB_PATH"
+
       - name: Validate, test, and package tvOS
         run: scripts/ci_validate_tvos.sh
 
