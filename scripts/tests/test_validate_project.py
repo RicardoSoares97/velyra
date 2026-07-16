@@ -19,6 +19,13 @@ class ValidateProjectSpecTests(unittest.TestCase):
 
         self.assertIn("isolated deinit {", source)
 
+    def test_trakt_scrobble_controller_isolates_deinit(self) -> None:
+        source = (
+            REPOSITORY_ROOT / "VelyraTV/Features/Trakt/TraktScrobbleController.swift"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("isolated deinit {", source)
+
     def test_top_shelf_provider_matches_async_sdk_contract(self) -> None:
         source = (REPOSITORY_ROOT / "VelyraTopShelf/ContentProvider.swift").read_text(
             encoding="utf-8"
