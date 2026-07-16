@@ -1,7 +1,7 @@
-import TVServices
+@preconcurrency import TVServices
 
 final class ContentProvider: TVTopShelfContentProvider {
-  override func loadTopShelfContent() async throws -> TVTopShelfContent? {
+  override func loadTopShelfContent() async -> TVTopShelfContent? {
     let snapshot = await TopShelfSnapshotStore.shared.load()
     let continueItems = snapshot.continueWatching.compactMap(makeItem)
     let recommendationItems = snapshot.recommendations.compactMap(makeItem)

@@ -12,6 +12,18 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
 class ValidateProjectSpecTests(unittest.TestCase):
+    def test_top_shelf_provider_matches_async_sdk_contract(self) -> None:
+        source = (REPOSITORY_ROOT / "VelyraTopShelf/ContentProvider.swift").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("@preconcurrency import TVServices", source)
+        self.assertIn(
+            "override func loadTopShelfContent() async -> TVTopShelfContent?",
+            source,
+        )
+        self.assertNotIn("loadTopShelfContent() async throws", source)
+
     def test_requires_test_host_to_match_application_product_name(self) -> None:
         project = (REPOSITORY_ROOT / "project.yml").read_text(encoding="utf-8")
         project_with_wrong_test_host = project.replace(
