@@ -252,6 +252,8 @@ def validate_project_spec(project: str) -> None:
     expected_test_host = "$(BUILT_PRODUCTS_DIR)/Velyra.app/Velyra"
     if not has_yaml_scalar(tests, "TEST_HOST", expected_test_host):
         fail("VelyraTVTests must set TEST_HOST to the Velyra application product")
+    if not has_yaml_scalar(full, "PRODUCT_MODULE_NAME", "VelyraTV"):
+        fail("VelyraTV must set PRODUCT_MODULE_NAME: VelyraTV")
 
     app_icon_key = re.compile(
         r"^\s*ASSETCATALOG_COMPILER_APPICON_NAME\s*:", re.MULTILINE

@@ -26,6 +26,21 @@ class ValidateProjectSpecTests(unittest.TestCase):
 
         self.assertIn("isolated deinit {", source)
 
+    def test_requires_testable_application_module_name(self) -> None:
+        project = (REPOSITORY_ROOT / "project.yml").read_text(encoding="utf-8")
+        project_with_wrong_module = project.replace(
+            "PRODUCT_MODULE_NAME: VelyraTV", "PRODUCT_MODULE_NAME: Velyra", 1
+        )
+        stderr = io.StringIO()
+
+        with redirect_stderr(stderr), self.assertRaises(SystemExit):
+            validate_project_spec(project_with_wrong_module)
+
+        self.assertIn(
+            "VelyraTV must set PRODUCT_MODULE_NAME: VelyraTV",
+            stderr.getvalue(),
+        )
+
     def test_top_shelf_provider_matches_async_sdk_contract(self) -> None:
         source = (REPOSITORY_ROOT / "VelyraTopShelf/ContentProvider.swift").read_text(
             encoding="utf-8"
