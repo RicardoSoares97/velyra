@@ -249,6 +249,10 @@ def validate_project_spec(project: str) -> None:
     assert sideload_scheme is not None and sideload is not None
     assert full is not None and top_shelf is not None and tests is not None
 
+    expected_test_host = "$(BUILT_PRODUCTS_DIR)/Velyra.app/Velyra"
+    if not has_yaml_scalar(tests, "TEST_HOST", expected_test_host):
+        fail("VelyraTVTests must set TEST_HOST to the Velyra application product")
+
     app_icon_key = re.compile(
         r"^\s*ASSETCATALOG_COMPILER_APPICON_NAME\s*:", re.MULTILINE
     )

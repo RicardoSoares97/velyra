@@ -12,6 +12,23 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
 class ValidateProjectSpecTests(unittest.TestCase):
+    def test_requires_test_host_to_match_application_product_name(self) -> None:
+        project = (REPOSITORY_ROOT / "project.yml").read_text(encoding="utf-8")
+        project_with_wrong_test_host = project.replace(
+            'TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Velyra.app/Velyra"',
+            'TEST_HOST: "$(BUILT_PRODUCTS_DIR)/VelyraTV.app/VelyraTV"',
+            1,
+        )
+        stderr = io.StringIO()
+
+        with redirect_stderr(stderr), self.assertRaises(SystemExit):
+            validate_project_spec(project_with_wrong_test_host)
+
+        self.assertIn(
+            "VelyraTVTests must set TEST_HOST to the Velyra application product",
+            stderr.getvalue(),
+        )
+
     def test_rejects_globally_inherited_app_icon_setting(self) -> None:
         project = (REPOSITORY_ROOT / "project.yml").read_text(encoding="utf-8")
         marker = "  base:\n    SWIFT_VERSION:"

@@ -135,3 +135,4 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: pt.ricardosoares.velyra.tests
         GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Velyra.app/Velyra"
