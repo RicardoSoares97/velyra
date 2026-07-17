@@ -2,48 +2,82 @@
 
 ## Phase 0 — Foundation
 
-- [x] Product name and repository structure
-- [x] Light and dark colour tokens
+- [x] Velyra name and brand colour
+- [x] GitFlow branch strategy
 - [x] SwiftUI tvOS shell
-- [x] Focusable media card prototype
-- [x] AVPlayer proof-of-concept view
-- [ ] Generate and validate the project on macOS/Xcode
-- [ ] Add final app icon and brand assets
+- [x] Liquid Glass abstraction with legacy fallback
+- [x] One-screen automatic cinematic onboarding
+- [x] Silent looping background-video component
+- [x] Multi-language String Catalog foundation
+- [x] iCloud preference store and account status
+- [x] Keychain token store
+- [x] Trakt device-auth and refresh foundation
+- [x] Accessibility behaviour for motion and decorative video
+- [ ] Compile and validate with the latest stable Xcode
+- [ ] Add licensed final artwork, app icon and video loops
 
-## Phase 1 — Functional proof of concept
+## Phase 1 — Addon proof of concept
 
-- [ ] Add a remote addon by URL
-- [ ] Parse manifest and catalogue
-- [ ] Open metadata details
-- [ ] Resolve and display streams
-- [ ] Play compatible HLS/MP4 with AVPlayer
-- [ ] Add external subtitle selection
-- [ ] Implement Trakt device authentication
+- [x] Validate addon manifest URL
+- [x] Parse manifest and capabilities
+- [x] Catalogue aggregation and addon search
+- [x] Metadata details
+- [x] Stream resolution
+- [x] Subtitle resolution
+- [x] Addon management and iCloud synchronisation
 
-## Phase 2 — TV experience
+## Phase 2 — Complete Trakt integration
 
-- [ ] Sidebar or top-level navigation
-- [ ] Search with tvOS keyboard
-- [ ] Continue watching
-- [ ] Watchlist and history
-- [ ] Focus restoration between screens
-- [ ] Loading, empty and error states
-- [ ] Accessibility labels and reduced motion
+- [ ] Register Velyra Trakt application credentials
+- [ ] Device activation UI testing
+- [x] Watchlist read/write
+- [x] History read/write
+- [x] Collections
+- [x] Playback progress
+- [x] Scrobble start/pause/stop
+- [x] Offline queue and retry
+- [x] Rate-limit and token-expiry handling foundation
+- [x] Local/remote reconciliation and iCloud preference merging
 
-## Phase 3 — Playback quality
+## Phase 3 — Apple-quality TV experience
 
-- [ ] Inspect container and codec metadata
-- [ ] Match frame rate and dynamic range testing
-- [ ] Dolby Vision test matrix
-- [ ] Dolby Atmos test matrix
-- [ ] Multi-audio and subtitle tracks
-- [ ] Fallback/remux architecture
-- [ ] Playback diagnostics screen
+- [x] Home hero and first dynamic content rails
+- [x] Details screen with cinematic presentation
+- [x] Search with the native tvOS text-entry experience
+- [x] Top-level focus and section restoration
+- [x] Initial loading, preview and error states
+- [x] Context menus
+- [x] Top Shelf snapshot, deep links and extension implementation
+- [ ] Accessibility audit on hardware
 
-## Phase 4 — Distribution
+## Phase 4 — Playback quality
+
+- [x] Initial source/container ranking and AVFoundation playability check
+- [x] Native AVPlayerViewController path for HLS and MP4
+- [x] Automatic embedded audio/subtitle selection and player switching
+- [x] External SRT and WebVTT subtitles
+- [ ] Frame-rate and dynamic-range matching tests
+- [ ] Dolby Vision profile matrix
+- [ ] Dolby Atmos format matrix
+- [x] Fallback/remux architecture documented
+- [x] Player diagnostics and user-safe technical report
+
+## Phase 5 — Distribution
 
 - [ ] Apple Developer signing
-- [ ] TestFlight workflow
-- [ ] Privacy policy
-- [ ] App Store legal and content review
-- [ ] Crash reporting with privacy controls
+- [ ] iCloud container creation
+- [ ] TestFlight delivery
+- [x] Privacy policy draft
+- [ ] App Store content/legal review
+- [x] Privacy-safe local launch-health diagnostics and user-exportable report
+- [ ] Optional external crash reporting, only after provider and privacy review
+
+## Sprint 1 — Home e descoberta
+
+- [x] Hero cinematográfico dinâmico.
+- [x] Continuar a ver através do Trakt.
+- [x] Tendências de filmes e séries.
+- [x] Filtros por género.
+- [x] Filtros por serviço de streaming e região.
+- [x] Velyra Top 10 regional com rotulagem transparente.
+- [x] Cache persistente, estados vazios e modo offline degradado.
