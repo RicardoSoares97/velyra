@@ -14,6 +14,16 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
 class ValidateProjectSpecTests(unittest.TestCase):
+    def test_unsigned_test_host_uses_local_distribution_capabilities(self) -> None:
+        project = (REPOSITORY_ROOT / "project.yml").read_text(encoding="utf-8")
+        capabilities = (
+            REPOSITORY_ROOT
+            / "VelyraTV/Core/Distribution/DistributionCapabilities.swift"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('VELYRA_TEST_HOST: "1"', project)
+        self.assertIn('environment["VELYRA_TEST_HOST"] == "1"', capabilities)
+
     def test_application_info_plist_contains_installation_identifiers(self) -> None:
         with (REPOSITORY_ROOT / "VelyraTV/Resources/Info.plist").open("rb") as handle:
             info = plistlib.load(handle)

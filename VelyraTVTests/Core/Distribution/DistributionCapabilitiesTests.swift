@@ -16,4 +16,12 @@ final class DistributionCapabilitiesTests: XCTestCase {
     XCTAssertFalse(DistributionCapabilities.sideload.supportsTopShelf)
     XCTAssertTrue(DistributionCapabilities.sideload.isSideload)
   }
+
+  func testUnsignedTestHostUsesOnlyLocalCapabilities() {
+    let capabilities = DistributionCapabilities.current(
+      environment: ["VELYRA_TEST_HOST": "1"]
+    )
+
+    XCTAssertEqual(capabilities, .sideload)
+  }
 }

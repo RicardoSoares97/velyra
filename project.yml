@@ -23,6 +23,8 @@ schemes:
     test:
       targets:
         - VelyraTVTests
+      environmentVariables:
+        VELYRA_TEST_HOST: "1"
     run:
       config: Debug
     archive:

@@ -21,10 +21,14 @@ struct DistributionCapabilities: Equatable, Sendable {
   )
 
   static var current: DistributionCapabilities {
+    current(environment: ProcessInfo.processInfo.environment)
+  }
+
+  static func current(environment: [String: String]) -> DistributionCapabilities {
     #if VELYRA_SIDELOAD
       .sideload
     #else
-      .full
+      environment["VELYRA_TEST_HOST"] == "1" ? .sideload : .full
     #endif
   }
 }
