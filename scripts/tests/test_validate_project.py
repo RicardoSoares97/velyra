@@ -13,6 +13,21 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
 class ValidateProjectSpecTests(unittest.TestCase):
+    def test_main_actor_distribution_test_uses_nonisolated_store_factories(self) -> None:
+        source = (
+            REPOSITORY_ROOT / "VelyraTVTests/App/AppStateDistributionTests.swift"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "nonisolated private static func makeLocalUserStateStore", source
+        )
+        self.assertIn(
+            "nonisolated private static func makeLocalPreferencesStore", source
+        )
+        self.assertNotIn(
+            "defaults: try XCTUnwrap(UserDefaults(suiteName: suiteName))", source
+        )
+
     def test_user_defaults_cleanup_does_not_retain_actor_fixture(self) -> None:
         offenders: list[str] = []
         retained_fixture = re.compile(

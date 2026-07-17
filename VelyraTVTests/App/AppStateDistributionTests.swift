@@ -15,16 +15,12 @@ final class AppStateDistributionTests: XCTestCase {
     let cleanupDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
     cleanupDefaults.removePersistentDomain(forName: suiteName)
     defer { cleanupDefaults.removePersistentDomain(forName: suiteName) }
-    let stateStore = LocalUserStateStore(
-      defaults: try XCTUnwrap(UserDefaults(suiteName: suiteName))
-    )
+    let stateStore = try Self.makeLocalUserStateStore(suiteName: suiteName)
     let contentKey = "movie:local-persistence"
 
     let firstAppState = AppState(
       distributionCapabilities: .sideload,
-      preferencesStore: LocalPreferencesStore(
-        defaults: try XCTUnwrap(UserDefaults(suiteName: suiteName))
-      ),
+      preferencesStore: try Self.makeLocalPreferencesStore(suiteName: suiteName),
       cloudUserStore: stateStore,
       iCloudAccount: .localOnly()
     )
@@ -48,12 +44,8 @@ final class AppStateDistributionTests: XCTestCase {
 
     let secondAppState = AppState(
       distributionCapabilities: .sideload,
-      preferencesStore: LocalPreferencesStore(
-        defaults: try XCTUnwrap(UserDefaults(suiteName: suiteName))
-      ),
-      cloudUserStore: LocalUserStateStore(
-        defaults: try XCTUnwrap(UserDefaults(suiteName: suiteName))
-      ),
+      preferencesStore: try Self.makeLocalPreferencesStore(suiteName: suiteName),
+      cloudUserStore: try Self.makeLocalUserStateStore(suiteName: suiteName),
       iCloudAccount: .localOnly()
     )
     await secondAppState.bootstrap()
@@ -62,5 +54,19 @@ final class AppStateDistributionTests: XCTestCase {
       secondAppState.contentPlaybackPreference(for: contentKey)?.audioLanguageCode,
       "pt"
     )
+  }
+
+  nonisolated private static func makeLocalUserStateStore(
+    suiteName: String
+  ) throws -> LocalUserStateStore {
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+    return LocalUserStateStore(defaults: defaults)
+  }
+
+  nonisolated private static func makeLocalPreferencesStore(
+    suiteName: String
+  ) throws -> LocalPreferencesStore {
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+    return LocalPreferencesStore(defaults: defaults)
   }
 }
