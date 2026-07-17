@@ -118,7 +118,10 @@ enum StremioAddonImportPlanner {
   }
 
   private static func isLocalHost(_ host: String) -> Bool {
-    host == "localhost" || host == "127.0.0.1" || host == "::1"
-      || host.hasSuffix(".localhost")
+    let normalizedHost = host.trimmingCharacters(
+      in: CharacterSet(charactersIn: "[]")
+    )
+    return normalizedHost == "localhost" || normalizedHost == "127.0.0.1"
+      || normalizedHost == "::1" || normalizedHost.hasSuffix(".localhost")
   }
 }
