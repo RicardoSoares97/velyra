@@ -17,11 +17,14 @@ class ValidateProjectSpecTests(unittest.TestCase):
     def test_application_info_plist_contains_installation_identifiers(self) -> None:
         with (REPOSITORY_ROOT / "VelyraTV/Resources/Info.plist").open("rb") as handle:
             info = plistlib.load(handle)
+        with (REPOSITORY_ROOT / "VelyraTopShelf/Info.plist").open("rb") as handle:
+            top_shelf_info = plistlib.load(handle)
 
         self.assertEqual(info.get("CFBundleIdentifier"), "$(PRODUCT_BUNDLE_IDENTIFIER)")
         self.assertEqual(info.get("CFBundleExecutable"), "$(EXECUTABLE_NAME)")
         self.assertEqual(info.get("CFBundleInfoDictionaryVersion"), "6.0")
         self.assertEqual(info.get("CFBundlePackageType"), "APPL")
+        self.assertEqual(top_shelf_info.get("CFBundleExecutable"), "$(EXECUTABLE_NAME)")
 
     def test_main_actor_distribution_test_uses_nonisolated_store_factories(self) -> None:
         source = (
