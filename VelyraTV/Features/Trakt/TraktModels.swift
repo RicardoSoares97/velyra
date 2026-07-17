@@ -40,7 +40,7 @@ struct TraktToken: Codable, Equatable, Sendable {
   }
 
   func needsRefresh(now: Date = Date(), tolerance: TimeInterval = 86_400) -> Bool {
-    expiryDate.timeIntervalSince(now) < tolerance
+    expiryDate.timeIntervalSince(now) <= tolerance
   }
 }
 

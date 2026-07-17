@@ -168,7 +168,10 @@ struct AppPreferences: Codable, Equatable, Sendable {
     disabledAddonManifestURLs = disabledAddonManifestURLs.filter(addonManifestURLs.contains)
     addonPriority = addonPriority.filter(addonManifestURLs.contains)
     for url in addonManifestURLs where !addonPriority.contains(url) { addonPriority.append(url) }
-    homeSectionOrder = homeSectionOrder.filter(HomeSectionPreference.allCases.contains)
+    var seenHomeSections = Set<HomeSectionPreference>()
+    homeSectionOrder = homeSectionOrder.filter {
+      HomeSectionPreference.allCases.contains($0) && seenHomeSections.insert($0).inserted
+    }
     for section in HomeSectionPreference.allCases where !homeSectionOrder.contains(section) {
       homeSectionOrder.append(section)
     }
