@@ -53,7 +53,7 @@ struct HomeView: View {
         language: languageCode,
         region: regionCode
       )
-      if let feed = viewModel.feed {
+      if appState.distributionCapabilities.supportsTopShelf, let feed = viewModel.feed {
         try? await TopShelfSnapshotStore.shared.save(.make(feed: feed))
       }
     }

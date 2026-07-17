@@ -2,7 +2,11 @@
 
 Velyra is a native, cinematic media client for Apple TV. It combines an Apple-first tvOS experience with addon-based discovery, complete Trakt integration, iCloud preference synchronisation and accessible playback.
 
-> Current status: product architecture and interactive tvOS foundation. The project has not yet been compiled on macOS/Xcode.
+> Current status: product architecture and interactive tvOS foundation. The
+> complete production source passes a direct Swift 6/tvOS 17 simulator-SDK
+> type-check and XcodeGen generation. Authoritative `xcodebuild`, XCTest, unsigned
+> IPA packaging, and device evidence remain pending on GitHub-hosted Xcode while
+> this Mac has a local Xcode/DVT framework mismatch.
 
 ## Product principles
 
@@ -14,7 +18,7 @@ Velyra is a native, cinematic media client for Apple TV. It combines an Apple-fi
 - HTTP/JSON addons for authorised catalogues, metadata, streams and subtitles.
 - Multi-language interface: English, Portuguese (Portugal), Spanish and French from the first foundation.
 - Accessibility, focus restoration and reduced-motion behaviour treated as release requirements.
-- One-screen onboarding with automatic source, original-audio and regional-subtitle defaults.
+- Two-stage immersive onboarding with welcome and setup, including automatic source, original-audio and regional-subtitle defaults.
 - Smart source validation and failover that preserves playback position.
 - No bundled, hosted or promoted media content.
 
@@ -57,6 +61,7 @@ VelyraTV/
 │   ├── Player/
 │   └── Settings/
 └── Resources/
+    ├── Assets.xcassets          # Generated app icon, Top Shelf and onboarding assets
     ├── Localizable.xcstrings
     ├── PrivacyInfo.xcprivacy
     ├── VelyraTV.entitlements
@@ -73,6 +78,33 @@ VelyraTV/
 
 The cinematic, smart-playback, Home and core media foundations are integrated into `develop`. The active product-completion work extends Trakt, Library, offline resilience, player controls and release readiness.
 
+### Automated tvOS delivery
+
+The `tvOS Build` workflow validates pushes and pull requests across the GitFlow
+integration branches. Eligible same-repository runs retain an unsigned sideload
+IPA and SHA-256 checksum for 14 days; fork pull requests build and test without
+uploading artifacts.
+
+A release starts only from a stable `vMAJOR.MINOR.PATCH` tag on the matching
+`main` commit. The tag workflow independently validates and rebuilds the app,
+creates or resumes a draft GitHub Release, verifies its complete asset list, and
+only then publishes it. Each release contains exactly:
+
+- `Velyra-sideload-vMAJOR.MINOR.PATCH.ipa`, unsigned;
+- `Velyra-sideload-vMAJOR.MINOR.PATCH.ipa.sha256`;
+- `CHANGELOG-vMAJOR.MINOR.PATCH.md`, alongside categorized generated notes.
+
+Configure the repository secrets `TRAKT_CLIENT_ID`, `TRAKT_CLIENT_SECRET`, and
+`TMDB_READ_ACCESS_TOKEN` before tagging. They must belong to a restricted,
+monitored, rotatable distributed native client because their compiled values can
+be extracted from the public IPA. Apple credentials and signing material are not
+used by either workflow. atvloadly performs Personal Team signing and installation;
+the user remains responsible for re-signing and reinstalling when a free profile
+expires.
+
+The exact GitFlow release sequence, repository protection, labels, and recovery
+procedure are documented in `docs/gitflow.md` and `docs/release-readiness.md`.
+
 ## Apple platform contract
 
 `docs/apple-platform-standards.md` defines mandatory acceptance criteria for every feature and pull request. Native components, accessibility, localisation, privacy, focus and performance are release gates.
@@ -87,19 +119,40 @@ xcodegen generate
 open Velyra.xcodeproj
 ```
 
-## Trakt configuration
+## Build the unsigned sideload IPA
 
-Do not commit credentials. Pass the build settings locally or through CI secrets:
+A Mac with the current stable Xcode and XcodeGen from Homebrew is required:
 
 ```bash
-xcodebuild \
-  -project Velyra.xcodeproj \
-  -scheme VelyraTV \
-  TRAKT_CLIENT_ID='...' \
-  TRAKT_CLIENT_SECRET='...' \
-  TMDB_READ_ACCESS_TOKEN='...' \
-  build
+brew install xcodegen
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer scripts/build_sideload_ipa.sh
 ```
+
+Setting `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` selects the full Xcode toolchain for this command without administrator access or changing `xcode-select`. Override the artifact directory when needed:
+
+```bash
+SIDELOAD_OUTPUT_DIR=/path/to/output scripts/build_sideload_ipa.sh
+```
+
+`TRAKT_CLIENT_ID`, `TRAKT_CLIENT_SECRET`, and `TMDB_READ_ACCESS_TOKEN` are optional environment settings. The script transfers them through a temporary protected xcconfig and does not print their values. They are native-client configuration: once compiled, they can be extracted from the public IPA. GitHub Secrets keep values out of source and logs, but cannot make compiled values confidential.
+
+The result is an unsigned `Velyra-sideload.ipa` plus its SHA-256 checksum. atvloadly is responsible for Personal Team signing and installation. A free Personal Team profile typically has a seven-day expiry, so the app must be re-signed and reinstalled periodically.
+
+The sideload edition stores settings locally and has no iCloud preferences, CloudKit, App Groups, or dynamic Top Shelf. The full `VelyraTV` target remains available for a paid Apple Developer configuration. The current local Xcode/DVT framework mismatch prevents authoritative local archives; GitHub-hosted macOS is authoritative until the local Xcode installation is repaired.
+
+Never place an Apple credential, signing certificate, provisioning profile or atvloadly state in the repository or build artifacts. Optional distributed provider configuration follows the separate native-client boundary below.
+
+## Trakt configuration
+
+Do not commit credentials. Supply optional Trakt/TMDB provider values only as environment inputs to `scripts/build_sideload_ipa.sh`, using a secret-capable local or CI environment, then invoke the script normally:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer scripts/build_sideload_ipa.sh
+```
+
+The script copies those inputs into a mode-0600 temporary xcconfig, unsets the provider environment variables before invoking validation, XcodeGen and Xcode build tools, and removes the temporary file on success or failure. Provider values are not stored in the repository, not printed to logs, and not published as a standalone xcconfig or intermediate output. They are never passed as xcodebuild command-line settings; do not append them to the command above or invoke `xcodebuild` with them directly.
+
+The values are intentionally embedded in the built app Info.plist and IPA and are therefore extractable from every distributed build. Treat them only as distributed-native credentials: enforce provider-side restrictions, monitor their use and keep them rotatable. A local secret store or CI secret protects the inputs and logs, not the compiled client.
 
 OAuth tokens are stored in Keychain and are deliberately excluded from iCloud synchronisation.
 
@@ -144,7 +197,7 @@ Lightweight preferences are mirrored through `NSUbiquitousKeyValueStore`, while 
 
 ## Media assets
 
-Copyrighted series or film clips must never be committed without explicit rights. See `VelyraTV/Resources/Media/README.md` for the required background-loop names and accessibility rules.
+The generated asset catalog provides the Velyra app icon, static Top Shelf artwork and `OnboardingFallback`. `ImmersiveOnboardingBackdropView` keeps that original fallback rendered immediately, adds native SwiftUI motion when allowed, and can layer optional prefetched TMDB side backdrops without blocking onboarding. No MP4 is required to build or run. Optional MP4 background loops must never contain copyrighted series or film clips without explicit distribution rights. See `VelyraTV/Resources/Media/README.md` for optional names and accessibility rules.
 
 ## Branding
 

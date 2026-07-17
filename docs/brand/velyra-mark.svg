@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 120" role="img" aria-labelledby="title">
+  <title id="title">Velyra cinematic ribbon mark</title>
+  <defs>
+    <linearGradient id="ribbon" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FF9B60"/>
+      <stop offset="1" stop-color="#C8370D"/>
+    </linearGradient>
+  </defs>
+  <path d="M10 16 49 104c2 5 9 5 12 0l39-88H77L55 72 33 16H10Z" fill="url(#ribbon)"/>
+  <path d="M33 16h25L45 48 33 16Z" fill="#FFE0CC" fill-opacity=".85"/>
+</svg>

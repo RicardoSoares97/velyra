@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct AppShellView: View {
   @EnvironmentObject private var appState: AppState
@@ -29,6 +30,10 @@ struct AppShellView: View {
     .onChange(of: selectedSection) { _, value in
       restoredSectionRaw = value.rawValue
     }
+    .onChange(of: appState.networkStatus.isConnected) { _, isConnected in
+      guard !isConnected else { return }
+      postQueuedAccessibilityAnnouncement(String(localized: "network.offline"))
+    }
     .fullScreenCover(item: $appState.deepLinkedItem) { item in
       MediaDetailsView(item: item).environmentObject(appState)
     }
@@ -53,7 +58,6 @@ struct AppShellView: View {
       .frame(minHeight: 52)
       .background(.black.opacity(0.72), in: Capsule())
       .overlay { Capsule().stroke(.white.opacity(0.18), lineWidth: 1) }
-      .accessibilityLiveRegion(.polite)
   }
 
   private var navigationBar: some View {
@@ -90,4 +94,18 @@ struct AppShellView: View {
     .velyraGlass(cornerRadius: 28)
     .accessibilityElement(children: .contain)
   }
+}
+
+@MainActor
+private func postQueuedAccessibilityAnnouncement(_ message: String?) {
+  guard let message, !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+    return
+  }
+  let announcement = NSMutableAttributedString(string: message)
+  announcement.addAttribute(
+    .accessibilitySpeechQueueAnnouncement,
+    value: true,
+    range: NSRange(location: 0, length: announcement.length)
+  )
+  UIAccessibility.post(notification: .announcement, argument: announcement)
 }

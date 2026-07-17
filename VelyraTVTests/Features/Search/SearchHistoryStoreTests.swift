@@ -5,9 +5,11 @@ import XCTest
 final class SearchHistoryStoreTests: XCTestCase {
   func testNormalizesDeduplicatesAndCapsHistory() async {
     let suite = "SearchHistoryStoreTests-\(UUID().uuidString)"
-    let defaults = UserDefaults(suiteName: suite)!
-    defer { defaults.removePersistentDomain(forName: suite) }
-    let store = SearchHistoryStore(defaults: defaults, maximumCount: 3)
+    defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+    let store = SearchHistoryStore(
+      defaults: UserDefaults(suiteName: suite)!,
+      maximumCount: 3
+    )
 
     await store.add("  Dark  ")
     await store.add("dark")

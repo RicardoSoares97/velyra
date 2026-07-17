@@ -69,7 +69,9 @@ actor ImagePipeline {
   func clearAll() {
     memory.storage.removeAllObjects()
     session.configuration.urlCache?.removeAllCachedResponses()
-    inFlight.values.forEach { $0.cancel() }
+    for task in inFlight.values {
+      task.cancel()
+    }
     inFlight.removeAll()
   }
 
@@ -154,6 +156,8 @@ struct CachedRemoteImage<Placeholder: View>: View {
         placeholder
       }
     }
-    .task(id: url) { loader.load(url: url, targetSize: targetSize) }
+    .task(id: CachedImageRequest(url: url, targetSize: targetSize)) {
+      loader.load(url: url, targetSize: targetSize)
+    }
   }
 }

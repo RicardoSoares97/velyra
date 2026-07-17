@@ -1849,6 +1849,62 @@
         }
       }
     },
+    "settings.adjust.decrease": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decrease"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diminuir"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disminuir"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diminuer"
+          }
+        }
+      }
+    },
+    "settings.adjust.increase": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Increase"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aumentar"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aumentar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Augmenter"
+          }
+        }
+      }
+    },
     "settings.appearance": {
       "localizations": {
         "en": {
@@ -2717,6 +2773,202 @@
         }
       }
     },
+    "onboarding.immersive.eyebrow": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Apple TV. Your cinema."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A tua Apple TV. O teu cinema."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu Apple TV. Tu cine."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre Apple TV. Votre cinéma."
+          }
+        }
+      }
+    },
+    "onboarding.immersive.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cinema finds you."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O cinema encontra-te."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El cine te encuentra."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le cinéma vient à vous."
+          }
+        }
+      }
+    },
+    "onboarding.immersive.body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Velyra prepares source, original audio, and regional subtitles while current stories shape the atmosphere."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Velyra prepara a fonte, o áudio original e as legendas regionais enquanto as histórias do momento dão vida ao ambiente."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Velyra prepara la fuente, el audio original y los subtítulos regionales mientras las historias del momento dan vida al ambiente."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Velyra prépare la source, l’audio original et les sous-titres régionaux pendant que les histoires du moment donnent vie à l’ambiance."
+          }
+        }
+      }
+    },
+    "onboarding.immersive.continue": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continuar"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continuar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continuer"
+          }
+        }
+      }
+    },
+    "onboarding.immersive.continue.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shows your automatic setup choices."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra as tuas escolhas de configuração automática."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muestra tus opciones de configuración automática."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Affiche vos choix de configuration automatique."
+          }
+        }
+      }
+    },
+    "onboarding.immersive.back": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to welcome"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voltar às boas-vindas"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volver a la bienvenida"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revenir à l’accueil"
+          }
+        }
+      }
+    },
+    "onboarding.immersive.back.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Returns to the Velyra welcome screen."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regressa ao ecrã de boas-vindas da Velyra."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vuelve a la pantalla de bienvenida de Velyra."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revient à l’écran d’accueil de Velyra."
+          }
+        }
+      }
+    },
     "onboarding.simple.eyebrow": {
       "localizations": {
         "en": {
@@ -3049,6 +3301,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vos préférences sont synchronisées de manière privée via iCloud lorsqu’il est disponible. Aucun compte Velyra n’est requis."
+          }
+        }
+      }
+    },
+    "onboarding.sideload.privacy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings stay privately on this Apple TV in the sideload edition."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na edição sideload, as definições permanecem privadas nesta Apple TV."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En la edición sideload, los ajustes permanecen privados en este Apple TV."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans l’édition sideload, les réglages restent privés sur cet Apple TV."
           }
         }
       }
@@ -7029,6 +7309,62 @@
         }
       }
     },
+    "details.trailer.youtube": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trailer on YouTube"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trailer no YouTube"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tráiler en YouTube"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bande-annonce sur YouTube"
+          }
+        }
+      }
+    },
+    "details.trailer.providerUnavailable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The trailer provider is unavailable on this Apple TV."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O fornecedor do trailer não está disponível nesta Apple TV."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El proveedor del tráiler no está disponible en este Apple TV."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le fournisseur de la bande-annonce n’est pas disponible sur cette Apple TV."
+          }
+        }
+      }
+    },
     "diagnostics.body": {
       "localizations": {
         "en": {
@@ -9797,6 +10133,62 @@
           "stringUnit": {
             "state": "translated",
             "value": "Conserve les recherches récentes sur cet appareil."
+          }
+        }
+      }
+    },
+    "settings.sideload.body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings are stored on this Apple TV. iCloud sync and dynamic Top Shelf require a paid Apple Developer configuration."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As definições são guardadas nesta Apple TV. A sincronização iCloud e o Top Shelf dinâmico requerem uma configuração Apple Developer paga."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los ajustes se guardan en este Apple TV. La sincronización con iCloud y el Top Shelf dinámico requieren una configuración Apple Developer de pago."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les réglages sont stockés sur cet Apple TV. La synchronisation iCloud et le Top Shelf dynamique nécessitent une configuration Apple Developer payante."
+          }
+        }
+      }
+    },
+    "settings.sideload.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local sideload edition"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edição sideload local"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edición sideload local"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Édition sideload locale"
           }
         }
       }

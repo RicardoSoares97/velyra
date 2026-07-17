@@ -112,9 +112,7 @@ final class MediaDetailsViewModel: ObservableObject {
       }
       tmdbCast = bundle.credits?.cast ?? []
       tmdbCrew = bundle.credits?.crew ?? []
-      trailerURL =
-        bundle.videos.first(where: { $0.type == "Trailer" })?.externalURL
-        ?? bundle.videos.first?.externalURL
+      trailerURL = bundle.videos.lazy.compactMap(\.supportedOfficialTrailerURL).first
       certification = bundle.certification
       streamingProviders = bundle.providers?.streaming.map(\.streamingProvider) ?? []
       recommendations = deduplicate(
@@ -223,14 +221,20 @@ final class MediaDetailsViewModel: ObservableObject {
   func toggleWatchlist() async {
     guard let traktRepository else { return }
     await updateLibrary {
-      try await traktRepository.setWatchlist(item.traktReference, isListed: !isWatchlisted)
+      try await traktRepository.setWatchlist(
+        self.item.traktReference,
+        isListed: !self.isWatchlisted
+      )
     }
   }
 
   func toggleCollection() async {
     guard let traktRepository else { return }
     await updateLibrary {
-      try await traktRepository.setCollection(item.traktReference, isCollected: !isCollected)
+      try await traktRepository.setCollection(
+        self.item.traktReference,
+        isCollected: !self.isCollected
+      )
     }
   }
 
@@ -245,7 +249,7 @@ final class MediaDetailsViewModel: ObservableObject {
       guard !historyIDs.isEmpty else { return }
       await updateLibrary { try await traktRepository.removeHistory(ids: historyIDs) }
     } else {
-      await updateLibrary { try await traktRepository.markWatched(item.traktReference) }
+      await updateLibrary { try await traktRepository.markWatched(self.item.traktReference) }
     }
   }
 
@@ -260,7 +264,7 @@ final class MediaDetailsViewModel: ObservableObject {
     await updateLibrary {
       try await traktRepository.setListMembership(
         listID: listID,
-        reference: item.traktReference,
+        reference: self.item.traktReference,
         isListed: !isListed
       )
     }
@@ -268,7 +272,9 @@ final class MediaDetailsViewModel: ObservableObject {
 
   func setRating(_ rating: Int?) async {
     guard let traktRepository else { return }
-    await updateLibrary { try await traktRepository.setRating(item.traktReference, rating: rating) }
+    await updateLibrary {
+      try await traktRepository.setRating(self.item.traktReference, rating: rating)
+    }
   }
 
   private func updateLibrary(

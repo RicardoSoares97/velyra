@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct MediaDetailsView: View {
   @EnvironmentObject private var appState: AppState
@@ -9,6 +10,7 @@ struct MediaDetailsView: View {
   @State private var selectedSeason: Int?
   @State private var selectedRelatedItem: MediaItem?
   @State private var showsFullCredits = false
+  @State private var trailerOpenFailed = false
 
   init(item: MediaItem) {
     _viewModel = StateObject(wrappedValue: MediaDetailsViewModel(item: item))
@@ -68,7 +70,32 @@ struct MediaDetailsView: View {
     .fullScreenCover(isPresented: $showsFullCredits) {
       CreditsView(cast: viewModel.cast, crew: viewModel.crew)
     }
+    .onChange(of: trailerOpenFailed) { _, failed in
+      guard failed else { return }
+      announceForAccessibility(String(localized: "details.trailer.providerUnavailable"))
+    }
+    .onChange(of: viewModel.libraryMessage) { _, message in
+      guard let message else { return }
+      announceForAccessibility(message)
+    }
+    .onChange(of: viewModel.playbackError) { _, error in
+      guard let error else { return }
+      announceForAccessibility(error, politely: false)
+    }
     .onExitCommand { dismiss() }
+  }
+
+  @MainActor
+  private func announceForAccessibility(_ message: String, politely: Bool = true) {
+    let announcement = NSMutableAttributedString(string: message)
+    if politely {
+      announcement.addAttribute(
+        .accessibilitySpeechQueueAnnouncement,
+        value: true,
+        range: NSRange(location: 0, length: announcement.length)
+      )
+    }
+    UIAccessibility.post(notification: .announcement, argument: announcement)
   }
 
   private var background: some View {
@@ -151,11 +178,16 @@ struct MediaDetailsView: View {
 
       actionRow
 
+      if trailerOpenFailed {
+        Text("details.trailer.providerUnavailable")
+          .font(.subheadline.weight(.semibold))
+          .foregroundStyle(.white.opacity(0.78))
+      }
+
       if let message = viewModel.libraryMessage {
         Text(message)
           .font(.subheadline.weight(.semibold))
           .foregroundStyle(.white.opacity(0.78))
-          .accessibilityLiveRegion(.polite)
       }
 
       if let error = viewModel.playbackError {
@@ -163,7 +195,6 @@ struct MediaDetailsView: View {
           .foregroundStyle(.white)
           .padding(18)
           .velyraGlass(cornerRadius: 18)
-          .accessibilityLiveRegion(.assertive)
       }
     }
   }
@@ -315,9 +346,12 @@ struct MediaDetailsView: View {
 
       if let trailerURL = viewModel.trailerURL {
         Button {
-          openURL(trailerURL)
+          trailerOpenFailed = false
+          openURL(trailerURL) { accepted in
+            trailerOpenFailed = !accepted
+          }
         } label: {
-          Label("details.trailer", systemImage: "play.rectangle.fill")
+          Label("details.trailer.youtube", systemImage: "play.rectangle.fill")
         }
         .buttonStyle(VelyraGlassButtonStyle())
       }

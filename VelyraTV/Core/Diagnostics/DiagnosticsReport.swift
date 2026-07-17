@@ -60,8 +60,10 @@ enum DiagnosticsReportBuilder {
         build: Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown",
         preferredLanguage: preferences.language.rawValue,
         contentRegion: preferences.contentRegion ?? "automatic",
-        iCloudEnabled: preferences.iCloudSyncEnabled,
-        iCloudStatus: appState.iCloudAccount.status.localizedKey,
+        iCloudEnabled: appState.distributionCapabilities.supportsCloudKit
+          && preferences.iCloudSyncEnabled,
+        iCloudStatus: appState.distributionCapabilities.supportsCloudKit
+          ? appState.iCloudAccount.status.localizedKey : "local-only",
         traktConnected: appState.traktSession.isConnected,
         pendingTraktChanges: await appState.traktLibraryRepository.pendingMutationCount(),
         failedTraktChanges: await appState.traktLibraryRepository.failedMutationCount(),

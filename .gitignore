@@ -26,3 +26,8 @@ Secrets.xcconfig
 # Python
 __pycache__/
 *.py[cod]
+
+# Local sideload and brainstorming outputs
+artifacts/
+.sideload-build/
+.superpowers/

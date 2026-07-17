@@ -4,6 +4,19 @@ import Foundation
 
 @MainActor
 final class PlaybackCoordinator: ObservableObject {
+  typealias IsPlayableLoader = @MainActor (AVAsset) async throws -> Bool
+  typealias MediaSelectionGroupLoader =
+    @MainActor (
+      _ asset: AVAsset,
+      _ characteristic: AVMediaCharacteristic
+    ) async throws -> AVMediaSelectionGroup?
+  typealias Play = @MainActor (AVPlayer) -> Void
+  typealias FailureObserverInstaller =
+    @MainActor (
+      _ item: AVPlayerItem,
+      _ handler: @escaping @MainActor (Error?) async -> Void
+    ) -> AnyCancellable
+
   enum State: Equatable {
     case idle
     case preparing
@@ -32,6 +45,10 @@ final class PlaybackCoordinator: ObservableObject {
   private let preferences: AppPreferences
   private let sourceSelector: AutomaticSourceSelector
   private let mediaResolver: MediaSelectionResolver
+  private let mediaSelectionGroupLoader: MediaSelectionGroupLoader
+  private let isPlayableLoader: IsPlayableLoader
+  private let play: Play
+  private let failureObserverInstaller: FailureObserverInstaller
   private var request: PlaybackRequest?
   private var itemFailureCancellable: AnyCancellable?
   private var manuallySelectedAudioLanguage: String?
@@ -40,15 +57,37 @@ final class PlaybackCoordinator: ObservableObject {
   private var scrobbleController: TraktScrobbleController?
   private var contentPreference: ContentPlaybackPreference?
   private var failedSourceIDs = Set<String>()
+  private var loadGeneration = 0
+  private var audioSelectionGeneration = 0
+  private var subtitleSelectionGeneration = 0
 
   init(
     preferences: AppPreferences,
     sourceSelector: AutomaticSourceSelector = AutomaticSourceSelector(),
-    mediaResolver: MediaSelectionResolver = MediaSelectionResolver()
+    mediaResolver: MediaSelectionResolver = MediaSelectionResolver(),
+    mediaSelectionGroupLoader: @escaping MediaSelectionGroupLoader = { asset, characteristic in
+      try await asset.loadMediaSelectionGroup(for: characteristic)
+    },
+    isPlayableLoader: @escaping IsPlayableLoader = { asset in
+      try await asset.load(.isPlayable)
+    },
+    play: @escaping Play = { player in player.play() },
+    failureObserverInstaller: @escaping FailureObserverInstaller = { item, handler in
+      NotificationCenter.default
+        .publisher(for: .AVPlayerItemFailedToPlayToEndTime, object: item)
+        .sink { notification in
+          let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
+          Task { @MainActor in await handler(error) }
+        }
+    }
   ) {
     self.preferences = preferences
     self.sourceSelector = sourceSelector
     self.mediaResolver = mediaResolver
+    self.mediaSelectionGroupLoader = mediaSelectionGroupLoader
+    self.isPlayableLoader = isPlayableLoader
+    self.play = play
+    self.failureObserverInstaller = failureObserverInstaller
     player.automaticallyWaitsToMinimizeStalling = true
     player.preventsDisplaySleepDuringVideoPlayback = true
   }
@@ -66,6 +105,7 @@ final class PlaybackCoordinator: ObservableObject {
   }
 
   func prepare(_ request: PlaybackRequest) async {
+    let generation = beginLoadGeneration()
     self.request = request
     failedSourceIDs.removeAll()
     state = .preparing
@@ -95,52 +135,55 @@ final class PlaybackCoordinator: ObservableObject {
       return
     }
 
-    await load(source, position: request.initialPosition, autoplay: true)
+    await load(
+      source,
+      position: request.initialPosition,
+      autoplay: true,
+      generation: generation
+    )
   }
 
   func selectSource(_ source: PlaybackSource) async {
+    let generation = beginLoadGeneration()
     let currentPosition = player.currentTime().seconds
     state = .switchingSource
     await load(
       source,
       position: currentPosition.isFinite ? currentPosition : 0,
-      autoplay: player.rate > 0
+      autoplay: player.rate > 0,
+      generation: generation
     )
   }
 
   func selectAudio(_ choice: MediaTrackChoice) {
-    guard let item = player.currentItem,
-      let group = item.asset.mediaSelectionGroup(forMediaCharacteristic: .audible)
-    else { return }
-
-    let option = mediaResolver.option(matching: choice.id, in: group, kind: .audio)
-    item.select(option, in: group)
-    manuallySelectedAudioLanguage = choice.languageCode
-    selectedAudioLanguageCode = choice.languageCode
-    refreshTrackChoices(for: item)
+    guard let item = player.currentItem else { return }
+    audioSelectionGeneration &+= 1
+    let generation = audioSelectionGeneration
+    Task { [weak self] in
+      await self?.applyAudioSelection(choice, to: item, generation: generation)
+    }
   }
 
   func selectSubtitles(_ choice: MediaTrackChoice) {
-    Task { await externalSubtitles.select(nil) }
-    guard let item = player.currentItem,
-      let group = item.asset.mediaSelectionGroup(forMediaCharacteristic: .legible)
-    else { return }
-
-    let option = mediaResolver.option(matching: choice.id, in: group, kind: .subtitles)
-    item.select(option, in: group)
-    manuallySelectedSubtitleLanguage = choice.languageCode
-    subtitlesManuallyDisabled = choice.isOff
-    selectedSubtitleLanguageCode = choice.languageCode
-    subtitlesDisabled = choice.isOff
-    refreshTrackChoices(for: item)
+    guard let item = player.currentItem else { return }
+    subtitleSelectionGeneration &+= 1
+    let generation = subtitleSelectionGeneration
+    Task { [weak self] in
+      await self?.applySubtitleSelection(choice, to: item, generation: generation)
+    }
   }
 
   func selectExternalSubtitle(_ track: ExternalSubtitleTrack?) async {
-    if let item = player.currentItem,
-      let group = item.asset.mediaSelectionGroup(forMediaCharacteristic: .legible)
-    {
-      item.select(nil, in: group)
-      refreshTrackChoices(for: item)
+    subtitleSelectionGeneration &+= 1
+    let generation = subtitleSelectionGeneration
+    if let item = player.currentItem {
+      let group = try? await mediaSelectionGroupLoader(item.asset, .legible)
+      guard isCurrentSubtitleSelection(generation, item: item) else { return }
+      if let group {
+        item.select(nil, in: group)
+        await refreshTrackChoices(for: item)
+        guard isCurrentSubtitleSelection(generation, item: item) else { return }
+      }
     }
     subtitlesManuallyDisabled = track == nil
     manuallySelectedSubtitleLanguage = track?.languageCode
@@ -177,8 +220,10 @@ final class PlaybackCoordinator: ObservableObject {
   private func load(
     _ source: PlaybackSource,
     position: TimeInterval,
-    autoplay: Bool
+    autoplay: Bool,
+    generation: Int
   ) async {
+    var installedItem: AVPlayerItem?
     do {
       let asset = AVURLAsset(
         url: source.url,
@@ -186,11 +231,13 @@ final class PlaybackCoordinator: ObservableObject {
           ? nil
           : ["AVURLAssetHTTPHeaderFieldsKey": source.headers]
       )
-      let playable = try await asset.load(.isPlayable)
+      let playable = try await isPlayableLoader(asset)
+      guard isCurrentLoad(generation) else { return }
       guard playable else { throw PlaybackError.notPlayable }
 
       let item = AVPlayerItem(asset: asset)
-      installFailureObserver(for: item)
+      installedItem = item
+      installFailureObserver(for: item, source: source, generation: generation)
       player.replaceCurrentItem(with: item)
       currentSource = source
       selectedSourceAddonID = source.addonName
@@ -220,15 +267,20 @@ final class PlaybackCoordinator: ObservableObject {
         subtitleLanguageCode: subtitleLanguage,
         preferences: preferences
       )
+      guard isCurrentLoad(generation, item: item) else { return }
 
-      if let audioGroup = asset.mediaSelectionGroup(forMediaCharacteristic: .audible) {
+      let audioGroup = try? await mediaSelectionGroupLoader(asset, .audible)
+      guard isCurrentLoad(generation, item: item) else { return }
+      if let audioGroup {
         let selectedAudio =
           manuallySelectedAudioLanguage.flatMap {
             mediaResolver.option(matchingLanguage: $0, in: audioGroup)
           } ?? resolved.audio
         item.select(selectedAudio, in: audioGroup)
       }
-      if let subtitleGroup = asset.mediaSelectionGroup(forMediaCharacteristic: .legible) {
+      let subtitleGroup = try? await mediaSelectionGroupLoader(asset, .legible)
+      guard isCurrentLoad(generation, item: item) else { return }
+      if let subtitleGroup {
         let selectedSubtitles: AVMediaSelectionOption?
         if subtitlesManuallyDisabled {
           selectedSubtitles = nil
@@ -247,40 +299,52 @@ final class PlaybackCoordinator: ObservableObject {
         initialProgress > 0
       {
         let duration = try? await asset.load(.duration)
+        guard isCurrentLoad(generation, item: item) else { return }
         if let durationSeconds = duration?.seconds, durationSeconds.isFinite, durationSeconds > 0 {
           resolvedPosition = durationSeconds * (initialProgress / 100)
         }
       }
       if resolvedPosition > 0 {
         await seek(to: resolvedPosition)
+        guard isCurrentLoad(generation, item: item) else { return }
       }
 
-      refreshTrackChoices(for: item)
-      if let subtitleGroup = asset.mediaSelectionGroup(forMediaCharacteristic: .legible),
+      await refreshTrackChoices(for: item)
+      guard isCurrentLoad(generation, item: item) else { return }
+      if let subtitleGroup,
         item.currentMediaSelection.selectedMediaOption(in: subtitleGroup) != nil
       {
         await externalSubtitles.select(nil)
+        guard isCurrentLoad(generation, item: item) else { return }
       } else if preferences.subtitlesEnabledByDefault {
         await externalSubtitles.selectPreferred(languageCodes: externalSubtitleCandidates)
+        guard isCurrentLoad(generation, item: item) else { return }
       }
       failedSourceIDs.remove(source.id)
       state = .ready
-      if autoplay { player.play() }
+      if autoplay { play(player) }
     } catch {
-      await failover(after: source, underlyingError: error)
+      guard isCurrentLoad(generation, item: installedItem) else { return }
+      await failover(after: source, underlyingError: error, generation: generation)
     }
   }
 
-  private func installFailureObserver(for item: AVPlayerItem) {
-    itemFailureCancellable = NotificationCenter.default
-      .publisher(for: .AVPlayerItemFailedToPlayToEndTime, object: item)
-      .sink { [weak self] notification in
-        let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
-        Task { @MainActor in
-          guard let self, let source = self.currentSource else { return }
-          await self.failover(after: source, underlyingError: error)
-        }
-      }
+  private func installFailureObserver(
+    for item: AVPlayerItem,
+    source: PlaybackSource,
+    generation: Int
+  ) {
+    itemFailureCancellable = failureObserverInstaller(item) { [weak self] error in
+      guard let self,
+        self.isCurrentLoad(generation, item: item),
+        self.currentSource?.id == source.id
+      else { return }
+      await self.failover(
+        after: source,
+        underlyingError: error,
+        generation: generation
+      )
+    }
   }
 
   private func seek(to seconds: TimeInterval) async {
@@ -295,7 +359,11 @@ final class PlaybackCoordinator: ObservableObject {
     }
   }
 
-  private func failover(after source: PlaybackSource, underlyingError: Error?) async {
+  private func failover(
+    after source: PlaybackSource,
+    underlyingError: Error?,
+    generation: Int
+  ) async {
     failedSourceIDs.insert(source.id)
     guard preferences.automaticSourceFailover else {
       state = .failed(
@@ -316,13 +384,70 @@ final class PlaybackCoordinator: ObservableObject {
     await load(
       next,
       position: position.isFinite ? position : 0,
-      autoplay: true
+      autoplay: true,
+      generation: generation
     )
   }
 
-  private func refreshTrackChoices(for item: AVPlayerItem) {
-    let audioGroup = item.asset.mediaSelectionGroup(forMediaCharacteristic: .audible)
-    let subtitleGroup = item.asset.mediaSelectionGroup(forMediaCharacteristic: .legible)
+  private func beginLoadGeneration() -> Int {
+    loadGeneration &+= 1
+    return loadGeneration
+  }
+
+  private func isCurrentLoad(_ generation: Int, item: AVPlayerItem? = nil) -> Bool {
+    guard generation == loadGeneration else { return false }
+    guard let item else { return true }
+    return player.currentItem === item
+  }
+
+  private func applyAudioSelection(
+    _ choice: MediaTrackChoice,
+    to item: AVPlayerItem,
+    generation: Int
+  ) async {
+    let group = try? await mediaSelectionGroupLoader(item.asset, .audible)
+    guard generation == audioSelectionGeneration,
+      player.currentItem === item,
+      let group
+    else { return }
+
+    let option = mediaResolver.option(matching: choice.id, in: group, kind: .audio)
+    item.select(option, in: group)
+    manuallySelectedAudioLanguage = choice.languageCode
+    selectedAudioLanguageCode = choice.languageCode
+    await refreshTrackChoices(for: item)
+  }
+
+  private func applySubtitleSelection(
+    _ choice: MediaTrackChoice,
+    to item: AVPlayerItem,
+    generation: Int
+  ) async {
+    guard isCurrentSubtitleSelection(generation, item: item) else { return }
+    await externalSubtitles.select(nil)
+    guard isCurrentSubtitleSelection(generation, item: item) else { return }
+
+    let group = try? await mediaSelectionGroupLoader(item.asset, .legible)
+    guard isCurrentSubtitleSelection(generation, item: item), let group else { return }
+
+    let option = mediaResolver.option(matching: choice.id, in: group, kind: .subtitles)
+    item.select(option, in: group)
+    manuallySelectedSubtitleLanguage = choice.languageCode
+    subtitlesManuallyDisabled = choice.isOff
+    selectedSubtitleLanguageCode = choice.languageCode
+    subtitlesDisabled = choice.isOff
+    await refreshTrackChoices(for: item)
+  }
+
+  private func isCurrentSubtitleSelection(_ generation: Int, item: AVPlayerItem) -> Bool {
+    generation == subtitleSelectionGeneration && player.currentItem === item
+  }
+
+  private func refreshTrackChoices(for item: AVPlayerItem) async {
+    let audioGroup = try? await mediaSelectionGroupLoader(item.asset, .audible)
+    guard player.currentItem === item else { return }
+    let subtitleGroup = try? await mediaSelectionGroupLoader(item.asset, .legible)
+    guard player.currentItem === item else { return }
     let selectedAudio = audioGroup.flatMap {
       item.currentMediaSelection.selectedMediaOption(in: $0)
     }

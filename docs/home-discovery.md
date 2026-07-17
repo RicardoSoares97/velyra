@@ -70,6 +70,16 @@ Para serviços que publiquem rankings oficiais, como o Top 10 semanal da Netflix
 - Trakt playback: atualização no arranque, regresso à app e fim de reprodução.
 - Dados antigos podem ser apresentados durante uma falha de rede, com indicação discreta.
 
+### Separação do onboarding
+
+As tendências decorativas do onboarding não são o feed de descoberta da Home. A Home mantém as secções, regras editoriais e cache de 15 minutos descritos acima; o onboarding pede separadamente tendências diárias TMDB de séries e filmes apenas para compor o fundo da primeira experiência.
+
+Esse pequeno cache de onboarding é segmentado por idioma e região: fica fresh até seis horas e pode servir de fallback decorativo stale depois de seis horas e até sete dias. Snapshots expirados ou corrompidos, mudança de locale, credencial TMDB ausente e modo offline nunca impedem o onboarding, que começa sempre pela arte original local. Backdrops remotos só são publicados depois de um prefetch de imagem bem-sucedido.
+
+A seleção decorativa é diária e determinística, usa a seed `UTC day|language|region`, intercala candidatos de séries e filmes e escolhe no máximo dois. Os endpoints de séries e filmes falham de forma independente, pelo que um pode fornecer decoração mesmo quando o outro falha; sem resultados válidos permanece o fallback local (ou um snapshot stale elegível).
+
+Metadata de trailers não participa nesta seleção, não alimenta o hero da Home e não autoriza autoplay. Um trailer elegível continua a ser uma ação explícita nos Detalhes que abre o fornecedor externo.
+
 ## Configuração
 
 Adicionar ao ambiente de build:

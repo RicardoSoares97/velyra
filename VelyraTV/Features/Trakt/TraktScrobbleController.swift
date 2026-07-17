@@ -26,7 +26,7 @@ final class TraktScrobbleController {
     self.context = context
   }
 
-  deinit {
+  isolated deinit {
     if let timeObserver { player.removeTimeObserver(timeObserver) }
   }
 
