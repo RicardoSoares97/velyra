@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import plistlib
 import re
 import unittest
 from contextlib import redirect_stderr
@@ -13,6 +14,15 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
 class ValidateProjectSpecTests(unittest.TestCase):
+    def test_application_info_plist_contains_installation_identifiers(self) -> None:
+        with (REPOSITORY_ROOT / "VelyraTV/Resources/Info.plist").open("rb") as handle:
+            info = plistlib.load(handle)
+
+        self.assertEqual(info.get("CFBundleIdentifier"), "$(PRODUCT_BUNDLE_IDENTIFIER)")
+        self.assertEqual(info.get("CFBundleExecutable"), "$(EXECUTABLE_NAME)")
+        self.assertEqual(info.get("CFBundleInfoDictionaryVersion"), "6.0")
+        self.assertEqual(info.get("CFBundlePackageType"), "APPL")
+
     def test_main_actor_distribution_test_uses_nonisolated_store_factories(self) -> None:
         source = (
             REPOSITORY_ROOT / "VelyraTVTests/App/AppStateDistributionTests.swift"
