@@ -19,7 +19,8 @@ struct AddonConfigurationTransfer: Codable, Equatable, Sendable {
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.sortedKeys]
     let value = try encoder.encode(self).base64EncodedString()
-    return value
+    return
+      value
       .replacingOccurrences(of: "+", with: "-")
       .replacingOccurrences(of: "/", with: "_")
       .replacingOccurrences(of: "=", with: "")

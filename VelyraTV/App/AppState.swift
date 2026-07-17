@@ -24,6 +24,10 @@ final class AppState: ObservableObject {
   private var iCloudObservation: AnyCancellable?
   private var memoryWarningObservation: AnyCancellable?
   private var networkObservation: AnyCancellable?
+  private lazy var preferenceWriteCoordinator = PreferenceWriteCoordinator {
+    [weak self] snapshot in
+    await self?.persistPreferenceSnapshot(snapshot)
+  }
 
   init(
     distributionCapabilities: DistributionCapabilities = .current,
@@ -156,8 +160,7 @@ final class AppState: ObservableObject {
       break
     case .background:
       await launchHealth.endSessionCleanly()
-      await preferencesStore.save(preferences)
-      await persistCloudStateReportingError()
+      await preferenceWriteCoordinator.flush()
       await ImagePipeline.shared.clearMemory()
     @unknown default:
       break
@@ -169,11 +172,7 @@ final class AppState: ObservableObject {
     mutate(&preferences)
     preferences.normalize()
     cloudState.markPreferenceChanges(from: previous, to: preferences)
-    let snapshot = preferences
-    Task {
-      await preferencesStore.save(snapshot)
-      await persistCloudStateReportingError()
-    }
+    preferenceWriteCoordinator.schedule(preferences)
   }
 
   func contentPlaybackPreference(for key: String) -> ContentPlaybackPreference? {
@@ -208,8 +207,8 @@ final class AppState: ObservableObject {
     preferences = configured
     cloudState.markPreferenceChanges(from: previous, to: configured)
     Task {
-      await preferencesStore.save(configured)
-      await persistCloudStateReportingError()
+      preferenceWriteCoordinator.schedule(configured)
+      await preferenceWriteCoordinator.flush()
     }
   }
 
@@ -226,11 +225,7 @@ final class AppState: ObservableObject {
     preferences.resetPlaybackPreferences()
     cloudState.markPreferenceChanges(from: previous, to: preferences)
     cloudState.clearContentPlaybackPreferences()
-    let snapshot = preferences
-    Task {
-      await preferencesStore.save(snapshot)
-      await persistCloudStateReportingError()
-    }
+    preferenceWriteCoordinator.schedule(preferences)
   }
 
   func resetHomePreferences() {
@@ -242,6 +237,7 @@ final class AppState: ObservableObject {
   }
 
   func syncCloudNow() async {
+    await preferenceWriteCoordinator.flush()
     guard distributionCapabilities.supportsCloudKit else { return }
     await iCloudAccount.refresh()
     guard preferences.iCloudSyncEnabled, iCloudAccount.status == .available else { return }
@@ -281,6 +277,7 @@ final class AppState: ObservableObject {
   }
 
   func resetApplicationData() async {
+    preferenceWriteCoordinator.cancel()
     await traktSession.disconnect()
     await traktLibraryRepository.clearLocalData()
     await TopShelfSnapshotStore.shared.clear()
@@ -342,6 +339,22 @@ final class AppState: ObservableObject {
   private func persistCloudStateReportingError() async {
     do {
       try await persistCloudState()
+      cloudSyncError = nil
+    } catch {
+      cloudSyncError = error.localizedDescription
+    }
+  }
+
+  private func persistPreferenceSnapshot(_ snapshot: AppPreferences) async {
+    await preferencesStore.save(snapshot)
+    do {
+      var snapshotState = cloudState
+      snapshotState.preferences = snapshot
+      if !distributionCapabilities.supportsCloudKit {
+        try await cloudUserStore.save(snapshotState)
+      } else if snapshot.iCloudSyncEnabled, iCloudAccount.status == .available {
+        try await cloudUserStore.save(snapshotState)
+      }
       cloudSyncError = nil
     } catch {
       cloudSyncError = error.localizedDescription

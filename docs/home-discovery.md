@@ -61,6 +61,8 @@ Para serviços que publiquem rankings oficiais, como o Top 10 semanal da Netflix
 - Com Reduzir Movimento, o vídeo é substituído por backdrop estático.
 - Com Reduzir Transparência, filtros e navegação usam superfícies sólidas.
 - Cada título deve ter texto alternativo, tipo de conteúdo, ano e progresso quando aplicável.
+- O hero e os logótipos de serviços usam o pipeline de imagens com downsampling.
+- A atribuição TMDB/JustWatch aparece uma vez no rodapé; não se repete em cada rail.
 
 ## Cache
 
@@ -76,7 +78,7 @@ As tendências decorativas do onboarding não são o feed de descoberta da Home.
 
 Esse pequeno cache de onboarding é segmentado por idioma e região: fica fresh até seis horas e pode servir de fallback decorativo stale depois de seis horas e até sete dias. Snapshots expirados ou corrompidos, mudança de locale, credencial TMDB ausente e modo offline nunca impedem o onboarding, que começa sempre pela arte original local. Backdrops remotos só são publicados depois de um prefetch de imagem bem-sucedido.
 
-A seleção decorativa é diária e determinística, usa a seed `UTC day|language|region`, intercala candidatos de séries e filmes e escolhe no máximo dois. Os endpoints de séries e filmes falham de forma independente, pelo que um pode fornecer decoração mesmo quando o outro falha; sem resultados válidos permanece o fallback local (ou um snapshot stale elegível).
+A seleção decorativa é diária e determinística, usa a seed `UTC day|language|region` e publica no máximo um backdrop já prefetched. Os endpoints de séries e filmes falham de forma independente, pelo que um pode fornecer decoração mesmo quando o outro falha; sem resultados válidos permanece o fallback local (ou um snapshot stale elegível).
 
 Metadata de trailers não participa nesta seleção, não alimenta o hero da Home e não autoriza autoplay. Um trailer elegível continua a ser uma ação explícita nos Detalhes que abre o fornecedor externo.
 

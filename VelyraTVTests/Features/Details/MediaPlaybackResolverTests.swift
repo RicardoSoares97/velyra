@@ -89,8 +89,14 @@ private actor FakeAddonContentProvider: AddonContentProviding {
   }
 
   func installedAddons(urlStrings: [String]) async -> [InstalledAddonDescriptor] { [] }
-  func search(query: String, kind: MediaKind?, urlStrings: [String]) async -> [AddonMetaPreview] { [] }
+  func search(query: String, kind: MediaKind?, urlStrings: [String]) async -> [AddonMetaPreview] {
+    []
+  }
   func metadata(type: String, id: String, urlStrings: [String]) async -> [AddonMetaDetail] { [] }
-  func streams(type: String, id: String, urlStrings: [String]) async -> [ResolvedAddonStream] { streamsValue }
-  func subtitles(type: String, id: String, urlStrings: [String]) async -> [ResolvedAddonSubtitle] { subtitlesValue }
+  func streams(type: String, id: String, urlStrings: [String]) async -> [ResolvedAddonStream] {
+    streamsValue
+  }
+  func subtitles(type: String, id: String, urlStrings: [String]) async -> [ResolvedAddonSubtitle] {
+    subtitlesValue
+  }
 }

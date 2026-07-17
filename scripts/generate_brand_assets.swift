@@ -538,19 +538,69 @@ func generateIconStack(_ spec: BrandAssetSpec, in brandURL: URL) throws {
   }
 }
 
-func generateTopShelf(_ spec: BrandAssetSpec, in brandURL: URL, source: CGImage) throws {
+func drawTopShelfBackground(in context: CGContext, width: Int, height: Int) {
+  let canvas = CGRect(x: 0, y: 0, width: width, height: height)
+  context.setFillColor(CGColor(red: 3 / 255, green: 3 / 255, blue: 5 / 255, alpha: 1))
+  context.fill(canvas)
+
+  let edgeLight = CGGradient(
+    colorsSpace: sRGB,
+    colors: [
+      CGColor(
+        red: CGFloat(0xDD) / 255,
+        green: CGFloat(0x57) / 255,
+        blue: CGFloat(0x1C) / 255,
+        alpha: 0.22
+      ),
+      CGColor(
+        red: CGFloat(0x74) / 255,
+        green: CGFloat(0x22) / 255,
+        blue: CGFloat(0x0A) / 255,
+        alpha: 0.07
+      ),
+      CGColor(red: 0, green: 0, blue: 0, alpha: 0),
+    ] as CFArray,
+    locations: [0, 0.38, 1]
+  )!
+  let center = CGPoint(x: CGFloat(width) * 0.08, y: CGFloat(height) * 0.5)
+  context.drawRadialGradient(
+    edgeLight,
+    startCenter: center,
+    startRadius: 0,
+    endCenter: center,
+    endRadius: CGFloat(width) * 0.46,
+    options: [.drawsAfterEndLocation]
+  )
+
+  context.saveGState()
+  context.setStrokeColor(orange.copy(alpha: 0.11)!)
+  context.setLineWidth(CGFloat(height) * 0.012)
+  context.setLineCap(.round)
+  let ribbonLight = CGMutablePath()
+  ribbonLight.move(to: CGPoint(x: CGFloat(width) * 0.76, y: -CGFloat(height) * 0.08))
+  ribbonLight.addCurve(
+    to: CGPoint(x: CGFloat(width) * 1.03, y: CGFloat(height) * 0.92),
+    control1: CGPoint(x: CGFloat(width) * 0.84, y: CGFloat(height) * 0.18),
+    control2: CGPoint(x: CGFloat(width) * 0.90, y: CGFloat(height) * 0.72)
+  )
+  context.addPath(ribbonLight)
+  context.strokePath()
+  context.restoreGState()
+}
+
+func generateTopShelf(_ spec: BrandAssetSpec, in brandURL: URL) throws {
   let imageSetURL = brandURL.appendingPathComponent(spec.directory, isDirectory: true)
   try makeDirectory(imageSetURL)
   var images: [[String: Any]] = []
   for raster in spec.rasters {
     let filename = rasterFilename(for: spec, raster: raster)
     let context = try makeContext(width: raster.width, height: raster.height, opaque: true)
-    try drawAspectFill(source, in: context, width: raster.width, height: raster.height)
+    drawTopShelfBackground(in: context, width: raster.width, height: raster.height)
     let markBox = CGRect(
       x: CGFloat(raster.width) * 0.075,
-      y: CGFloat(raster.height) * 0.20,
-      width: CGFloat(raster.width) * 0.18,
-      height: CGFloat(raster.height) * 0.60
+      y: CGFloat(raster.height) * 0.24,
+      width: CGFloat(raster.width) * 0.13,
+      height: CGFloat(raster.height) * 0.52
     )
     drawRibbon(in: context, destination: markBox)
     let outputURL = imageSetURL.appendingPathComponent(filename)
@@ -572,7 +622,7 @@ func generateCatalog(at catalogURL: URL) throws {
     case .iconStack:
       try generateIconStack(spec, in: brandURL)
     case .topShelf:
-      try generateTopShelf(spec, in: brandURL, source: source)
+      try generateTopShelf(spec, in: brandURL)
     }
   }
   let brandAssets: [[String: Any]] = brandAssetSpecs.map {

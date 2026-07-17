@@ -1,6 +1,10 @@
 import Foundation
 
-actor AddonClient {
+protocol AddonManifestValidating: Sendable {
+  func manifest(from manifestURL: URL) async throws -> AddonManifest
+}
+
+actor AddonClient: AddonManifestValidating {
   enum AddonError: Error {
     case invalidManifestURL
     case insecureURL

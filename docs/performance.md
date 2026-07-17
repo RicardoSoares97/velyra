@@ -9,6 +9,8 @@ Performance is a release requirement, especially on Apple TV where focus updates
 - Use pagination and progressive loading for large libraries and searches. TMDB enrichment is processed in bounded batches rather than launching hundreds of concurrent requests.
 - Apply stale-while-revalidate behaviour to Home and Trakt snapshots.
 - Use per-addon timeouts, health tracking and circuit breakers.
+- Poll temporary Stremio linking every three seconds with cancellation, a
+  two-minute bound and at most three concurrent manifest validations.
 - Respect Trakt rate limiting and back off globally after HTTP 429.
 - Reject unexpectedly large JSON, image and subtitle responses before decoding whenever response metadata permits.
 - Detect offline transitions without blocking cached navigation and retry pending Trakt mutations when connectivity returns.
@@ -29,6 +31,11 @@ Performance is a release requirement, especially on Apple TV where focus updates
 - Use lazy stacks and grids for long collections.
 - Keep focusable controls lightweight and restore focus after navigation.
 - Load cast, crew, recommendations and provider details only on the Details screen.
+- Construct only the active Settings category and keep category grids/lists lazy.
+- Coalesce rapid preference changes over 250 ms; backgrounding and explicit sync
+  flush the latest complete snapshot immediately.
+- Skip Top Shelf writes when IDs, artwork, progress and deep-link metadata are
+  semantically unchanged.
 
 ## Playback
 

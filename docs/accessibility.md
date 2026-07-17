@@ -2,6 +2,10 @@
 
 Accessibility is a release requirement for every Velyra feature.
 
+The standard visual experience remains active by default. Velyra never enables
+Reduce Motion, Reduce Transparency or Increase Contrast on the user's behalf;
+it adapts only when the corresponding tvOS system setting is enabled.
+
 ## Visual
 
 - System fonts and Dynamic Type where supported.
@@ -38,6 +42,8 @@ Accessibility is a release requirement for every Velyra feature.
 - Stable focus order.
 - Large targets and generous spacing.
 - No time-limited onboarding actions.
+- Temporary Stremio codes may expire for security, but the flow offers a clear
+  retry and never discards an installed Velyra addon.
 - Clear language and one primary action per decision.
 - Errors include recovery actions and do not discard user input.
 

@@ -9,7 +9,8 @@ IMDb integration is deliberately excluded from this release scope.
 | Capability | Source status | Notes |
 |---|---|---|
 | One-screen automatic onboarding | Implemented | No Velyra account or technical setup required. |
-| Apple-style tvOS navigation | Implemented | Home, Search, Library, Addons and Settings. |
+| Apple-style tvOS navigation | Implemented | Native adaptable sidebar on tvOS 18+ and editorial-rail fallback on tvOS 17. |
+| Silent Ribbon Strike launch ident | Implemented | Once per cold launch; opacity-only under Reduce Motion. |
 | Liquid Glass with accessible fallback | Implemented | Native glass on supported tvOS versions; material fallback otherwise. |
 | Cinematic silent backgrounds | Implemented | Automatically disabled or reduced for accessibility preferences. |
 | Four interface languages | Implemented | English, Portuguese (Portugal), Spanish and French. |
@@ -65,6 +66,7 @@ IMDb integration is deliberately excluded from this release scope.
 | Enable, disable and priority ordering | Implemented | Synced through private user settings. |
 | Health and circuit breaker | Implemented | Shared across Search, Details and Player resolution. |
 | Refresh, import and export | Implemented | Export excludes secrets and transient health data. |
+| Read-only Stremio import | Implemented | Official temporary link, selective HTTPS manifest preview and guaranteed local key cleanup; no Stremio writes. |
 | Per-addon diagnostics | Implemented | User-safe and redacted. |
 | Arbitrary JavaScript/plugin execution | Not supported | Deliberate security and App Store boundary. |
 
@@ -114,6 +116,8 @@ IMDb integration is deliberately excluded from this release scope.
 | Bounded metadata enrichment | Implemented | Prevents unbounded concurrent work for large libraries. |
 | HTTP response-size limits | Implemented | Shared, Trakt, TMDB and subtitle paths are bounded. |
 | Task cancellation and stale-while-revalidate patterns | Implemented | Applied to the principal discovery flows. |
+| Coalesced preference persistence | Implemented | Rapid changes persist as the latest snapshot; background and explicit sync flush. |
+| Semantic Top Shelf writes | Implemented | Timestamp-only changes do not rewrite the app-group snapshot. |
 | Static validation | Implemented | Local script checks resources, translations, privacy and source hygiene. |
 | Unit-test target | Implemented | Covers playback ranking, subtitles, Trakt queue, Cloud merge, addons, cache and diagnostics. |
 | macOS/Xcode build and Apple TV validation | Deferred | Explicitly excluded until Apple tooling is available. |

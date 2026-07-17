@@ -14,7 +14,7 @@ final class OnboardingMediaViewModelTests: XCTestCase {
   }
 
   @MainActor
-  func testPublishesOnlyFirstTwoSuccessfullyPrefetchedItemsInCandidateOrder() async {
+  func testPublishesOnlyFirstSuccessfullyPrefetchedItemInCandidateOrder() async {
     let candidates = [
       mediaItem(id: "failed"),
       mediaItem(id: "first"),
@@ -40,8 +40,8 @@ final class OnboardingMediaViewModelTests: XCTestCase {
     await loadTask.value
     let receivedURLs = await prefetcher.receivedURLs()
 
-    XCTAssertEqual(viewModel.items, [candidates[1], candidates[2]])
-    XCTAssertEqual(receivedURLs, candidates.prefix(3).map(\.backdropURL))
+    XCTAssertEqual(viewModel.items, [candidates[1]])
+    XCTAssertEqual(receivedURLs, candidates.prefix(2).map(\.backdropURL))
   }
 
   @MainActor

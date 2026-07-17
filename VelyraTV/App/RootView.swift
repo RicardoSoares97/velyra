@@ -3,15 +3,23 @@ import SwiftUI
 struct RootView: View {
   @EnvironmentObject private var appState: AppState
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var identPolicy = LaunchIdentPolicy()
+  @State private var identPresentation: LaunchIdentPresentation?
+  @State private var didPrepareIdent = false
 
   var body: some View {
-    Group {
-      if !appState.isReady {
-        LaunchExperienceView()
-      } else if !appState.preferences.hasCompletedOnboarding {
-        OnboardingView()
+    ZStack {
+      if !didPrepareIdent {
+        Color.black.ignoresSafeArea()
+      } else if let identPresentation {
+        RibbonStrikeView(presentation: identPresentation) {
+          withAnimation(reduceMotion ? nil : .easeOut(duration: 0.24)) {
+            self.identPresentation = nil
+          }
+        }
+        .transition(.opacity)
       } else {
-        AppShellView()
+        rootContent
       }
     }
     .preferredColorScheme(preferredColorScheme)
@@ -20,6 +28,22 @@ struct RootView: View {
       reduceMotion ? nil : .easeInOut(duration: 0.35),
       value: appState.preferences.hasCompletedOnboarding
     )
+    .onAppear {
+      guard !didPrepareIdent else { return }
+      identPresentation = identPolicy.consumePresentation(reduceMotion: reduceMotion)
+      didPrepareIdent = true
+    }
+  }
+
+  @ViewBuilder
+  private var rootContent: some View {
+    if !appState.isReady {
+      LaunchExperienceView()
+    } else if !appState.preferences.hasCompletedOnboarding {
+      OnboardingView()
+    } else {
+      AppShellView()
+    }
   }
 
   private var preferredColorScheme: ColorScheme? {
@@ -39,16 +63,9 @@ private struct LaunchExperienceView: View {
   var body: some View {
     ZStack {
       Color.black.ignoresSafeArea()
-      VStack(spacing: 18) {
-        Text("VELYRA")
-          .font(.system(size: 58, weight: .black, design: .rounded))
-          .tracking(7)
-          .foregroundStyle(VelyraTheme.primary)
-        ProgressView()
-          .tint(.white)
-      }
-      .accessibilityElement(children: .combine)
-      .accessibilityLabel(Text("app.loading"))
+      ProgressView()
+        .tint(VelyraTheme.primary)
+        .accessibilityLabel(Text("app.loading"))
     }
   }
 }

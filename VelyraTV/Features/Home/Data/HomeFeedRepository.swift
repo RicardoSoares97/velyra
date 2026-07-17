@@ -114,7 +114,7 @@ final class HomeFeedRepository {
             HomeSection(
               id: "provider-\(provider.id)",
               title: String(format: String(localized: "home.provider.available"), provider.name),
-              subtitle: String(localized: "home.provider.attribution"),
+              subtitle: nil,
               style: .poster,
               items: Array(items)
             )
@@ -212,7 +212,7 @@ final class HomeFeedRepository {
     return HomeSection(
       id: "provider-selection-\(provider.id)",
       title: provider.name,
-      subtitle: String(localized: "home.provider.attribution"),
+      subtitle: nil,
       style: .poster,
       items: Array(combined.prefix(24))
     )

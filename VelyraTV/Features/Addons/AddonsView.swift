@@ -9,6 +9,7 @@ struct AddonsView: View {
   @State private var transferCode = ""
   @State private var transferMessage: String?
   @State private var showsRemoveAllConfirmation = false
+  @State private var showsStremioImport = false
 
   var body: some View {
     VelyraPlaceholderScreen(
@@ -38,6 +39,14 @@ struct AddonsView: View {
         onImport: importConfiguration,
         onClose: { showsTransfer = false }
       )
+    }
+    .fullScreenCover(isPresented: $showsStremioImport) {
+      StremioImportView(
+        existingURLs: appState.preferences.addonManifestURLs,
+        onImport: importStremioAddons,
+        onClose: { showsStremioImport = false }
+      )
+      .environmentObject(appState)
     }
     .confirmationDialog(
       "addons.removeAll.title",
@@ -90,6 +99,13 @@ struct AddonsView: View {
         presentTransfer()
       } label: {
         Label("addons.transfer", systemImage: "square.and.arrow.up.on.square")
+      }
+      .buttonStyle(VelyraGlassButtonStyle())
+
+      Button {
+        showsStremioImport = true
+      } label: {
+        Label("stremio.import.action", systemImage: "arrow.down.circle")
       }
       .buttonStyle(VelyraGlassButtonStyle())
 
@@ -257,6 +273,19 @@ struct AddonsView: View {
       ? String(localized: "addons.capability.unknown")
       : capabilities.joined(separator: " · ")
     return "v\(manifest.version) · \(value)"
+  }
+
+  private func importStremioAddons(_ urls: [String]) {
+    appState.updatePreferences { preferences in
+      preferences.addonManifestURLs = urls
+    }
+    Task {
+      await viewModel.restore(
+        urlStrings: appState.preferences.addonManifestURLs,
+        disabled: appState.preferences.disabledAddonManifestURLs,
+        priority: appState.preferences.addonPriority
+      )
+    }
   }
 
   private func install() async {

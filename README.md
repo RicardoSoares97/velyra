@@ -18,7 +18,9 @@ Velyra is a native, cinematic media client for Apple TV. It combines an Apple-fi
 - HTTP/JSON addons for authorised catalogues, metadata, streams and subtitles.
 - Multi-language interface: English, Portuguese (Portugal), Spanish and French from the first foundation.
 - Accessibility, focus restoration and reduced-motion behaviour treated as release requirements.
-- Two-stage immersive onboarding with welcome and setup, including automatic source, original-audio and regional-subtitle defaults.
+- One-screen onboarding with one Start action, automatic source, original-audio and regional-subtitle defaults.
+- Silent one-shot Ribbon Strike launch ident with a Reduce Motion fade.
+- Read-only Stremio addon import through an official temporary linking code; no Stremio password or persistent Stremio session.
 - Smart source validation and failover that preserves playback position.
 - No bundled, hosted or promoted media content.
 
@@ -197,7 +199,7 @@ Lightweight preferences are mirrored through `NSUbiquitousKeyValueStore`, while 
 
 ## Media assets
 
-The generated asset catalog provides the Velyra app icon, static Top Shelf artwork and `OnboardingFallback`. `ImmersiveOnboardingBackdropView` keeps that original fallback rendered immediately, adds native SwiftUI motion when allowed, and can layer optional prefetched TMDB side backdrops without blocking onboarding. No MP4 is required to build or run. Optional MP4 background loops must never contain copyrighted series or film clips without explicit distribution rights. See `VelyraTV/Resources/Media/README.md` for optional names and accessibility rules.
+The generated asset catalog provides the Velyra app icon, restrained near-black Top Shelf artwork and `OnboardingFallback`. `ImmersiveOnboardingBackdropView` renders that fallback immediately and can layer at most one prefetched TMDB backdrop without blocking onboarding. No MP4 is required to build or run. Optional MP4 background loops must never contain copyrighted series or film clips without explicit distribution rights. See `VelyraTV/Resources/Media/README.md` for optional names and accessibility rules.
 
 ## Branding
 

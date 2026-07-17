@@ -54,7 +54,7 @@ struct HomeView: View {
         region: regionCode
       )
       if appState.distributionCapabilities.supportsTopShelf, let feed = viewModel.feed {
-        try? await TopShelfSnapshotStore.shared.save(.make(feed: feed))
+        _ = try? await TopShelfSnapshotStore.shared.saveIfChanged(.make(feed: feed))
       }
     }
   }
@@ -85,7 +85,7 @@ struct HomeView: View {
 
   private func feedView(_ feed: HomeFeed, warning: String? = nil) -> some View {
     ScrollView {
-      LazyVStack(alignment: .leading, spacing: 50) {
+      LazyVStack(alignment: .leading, spacing: 34) {
         CinematicHeroView(
           item: feed.hero,
           onPlay: { selectedItem = feed.hero },

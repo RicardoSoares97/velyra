@@ -12,11 +12,13 @@ Glass is not applied everywhere. It is reserved for:
 
 - top-level navigation;
 - primary and secondary actions;
-- onboarding status panels;
-- settings groups;
+- temporary linking/status panels;
+- the active settings surface;
 - temporary player controls.
 
 Rows of artwork remain mostly opaque to preserve image quality and performance.
+Settings category tiles and information rows use restrained opaque surfaces;
+nested glass cards are not permitted.
 
 ## Cinematic backgrounds
 
@@ -46,6 +48,18 @@ Rows of artwork remain mostly opaque to preserve image quality and performance.
 - Focus movement is short and predictable.
 - Focus restoration is required when dismissing details or the player.
 - Lists preserve their focused item after data refreshes.
+- Normal, focused, pressed and disabled states are distinct. The full focus
+  scale/depth treatment is the default; it is removed only when the tvOS Reduce
+  Motion setting is active.
+
+## Navigation and settings
+
+- tvOS 18 and later use native `TabView.sidebarAdaptable` navigation.
+- tvOS 17 uses the same information hierarchy in a compact editorial rail.
+- Settings opens to a two-column category centre and constructs only the active
+  category detail screen.
+- Orange communicates brand/selection; a white shape-matched highlight and
+  elevation communicate focus independently.
 
 ## Responsive TV layout
 

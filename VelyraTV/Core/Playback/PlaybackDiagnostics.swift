@@ -34,7 +34,8 @@ struct PlaybackDiagnostics: Equatable, Sendable {
     } else {
       audioFormat = nil
     }
-    delivery = source.isCached
+    delivery =
+      source.isCached
       ? String(localized: "playback.diagnostics.cached")
       : String(localized: "playback.diagnostics.direct")
   }
@@ -46,9 +47,15 @@ struct PlaybackDiagnostics: Equatable, Sendable {
       (String(localized: "playback.diagnostics.delivery"), delivery),
     ]
     if let addonName { result.append((String(localized: "playback.diagnostics.addon"), addonName)) }
-    if let resolution { result.append((String(localized: "playback.diagnostics.resolution"), resolution)) }
-    if let dynamicRange { result.append((String(localized: "playback.diagnostics.range"), dynamicRange)) }
-    if let audioFormat { result.append((String(localized: "playback.diagnostics.audio"), audioFormat)) }
+    if let resolution {
+      result.append((String(localized: "playback.diagnostics.resolution"), resolution))
+    }
+    if let dynamicRange {
+      result.append((String(localized: "playback.diagnostics.range"), dynamicRange))
+    }
+    if let audioFormat {
+      result.append((String(localized: "playback.diagnostics.audio"), audioFormat))
+    }
     return result
   }
 }

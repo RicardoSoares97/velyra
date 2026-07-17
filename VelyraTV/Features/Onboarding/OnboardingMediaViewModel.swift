@@ -52,7 +52,7 @@ final class OnboardingMediaViewModel: ObservableObject {
         guard !Task.isCancelled else { return }
         if await prefetcher.prefetch(candidate.backdropURL) {
           prefetchedItems.append(candidate)
-          if prefetchedItems.count == 2 { break }
+          break
         }
       }
 

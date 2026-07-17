@@ -23,11 +23,11 @@ struct TraktSettingsCard: View {
             "\(pendingCount)",
             systemImage: failedCount > 0 ? "exclamationmark.icloud.fill" : "icloud.and.arrow.up"
           )
-            .font(.subheadline.bold())
-            .foregroundStyle(VelyraTheme.primary)
-            .accessibilityLabel(
-              Text(String(format: String(localized: "library.pendingChanges"), pendingCount))
-            )
+          .font(.subheadline.bold())
+          .foregroundStyle(VelyraTheme.primary)
+          .accessibilityLabel(
+            Text(String(format: String(localized: "library.pendingChanges"), pendingCount))
+          )
         }
       }
 

@@ -71,9 +71,18 @@ extension View {
 
 struct VelyraGlassButtonStyle: ButtonStyle {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.colorSchemeContrast) private var contrast
+  @Environment(\.isEnabled) private var isEnabled
+  @Environment(\.isFocused) private var isFocused
   var prominent = false
 
   func makeBody(configuration: Configuration) -> some View {
+    let visualState = VelyraControlVisualState.resolve(
+      isEnabled: isEnabled,
+      isFocused: isFocused,
+      isPressed: configuration.isPressed
+    )
+
     configuration.label
       .font(.headline.weight(.semibold))
       .foregroundStyle(prominent ? VelyraTheme.onPrimary : Color.primary)
@@ -82,7 +91,7 @@ struct VelyraGlassButtonStyle: ButtonStyle {
       .background {
         if prominent {
           RoundedRectangle(cornerRadius: 22, style: .continuous)
-            .fill(configuration.isPressed ? VelyraTheme.primaryPressed : VelyraTheme.primary)
+            .fill(visualState == .pressed ? VelyraTheme.primaryPressed : VelyraTheme.primary)
         }
       }
       .velyraGlass(
@@ -90,7 +99,25 @@ struct VelyraGlassButtonStyle: ButtonStyle {
         tint: prominent ? VelyraTheme.primary.opacity(0.36) : .clear,
         interactive: true
       )
-      .scaleEffect(configuration.isPressed ? 0.98 : 1)
-      .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
+      .overlay {
+        RoundedRectangle(cornerRadius: 22, style: .continuous)
+          .stroke(
+            visualState.showsHighlight
+              ? Color.white.opacity(contrast == .increased ? 0.95 : 0.72)
+              : Color.clear,
+            lineWidth: contrast == .increased ? 3 : 2
+          )
+      }
+      .shadow(
+        color: visualState.showsHighlight ? Color.black.opacity(0.46) : .clear,
+        radius: visualState.showsHighlight ? 20 : 0,
+        y: visualState.showsHighlight ? 10 : 0
+      )
+      .scaleEffect(visualState.scale(reduceMotion: reduceMotion))
+      .opacity(visualState.opacity)
+      .animation(
+        reduceMotion ? nil : .easeOut(duration: 0.12),
+        value: visualState
+      )
   }
 }

@@ -107,6 +107,19 @@ enum HomeSectionPreference: String, Codable, CaseIterable, Identifiable, Sendabl
   case providerCollections
 
   var id: String { rawValue }
+
+  var displayNameKey: String {
+    switch self {
+    case .continueWatching: "home.section.continueWatching"
+    case .trendingSeries: "home.section.trendingSeries"
+    case .trendingMovies: "home.section.trendingMovies"
+    case .topSeries: "home.section.topSeries"
+    case .topMovies: "home.section.topMovies"
+    case .genres: "home.section.genres"
+    case .providers: "home.section.providers"
+    case .providerCollections: "home.section.providerCollections"
+    }
+  }
 }
 
 struct AppPreferences: Codable, Equatable, Sendable {

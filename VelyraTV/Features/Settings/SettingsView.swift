@@ -8,31 +8,50 @@ struct SettingsView: View {
   @State private var cacheMessage: String?
   @State private var cloudMessage: String?
   @State private var showsCloudDeleteConfirmation = false
+  @State private var showsStremioImport = false
 
   var body: some View {
-    ZStack {
-      CinematicBackgroundView(videoName: "settings-ambient", focalColor: VelyraTheme.primary)
-      ScrollView {
-        VStack(alignment: .leading, spacing: 34) {
-          header
-          appearanceSection
-          experienceSection
-          smartPlaybackSection
-          subtitlesSection
-          discoverySection
-          syncSection
-          TraktSettingsCard(
-            session: appState.traktSession, repository: appState.traktLibraryRepository)
-          storageSection
-          aboutSection
+    NavigationStack {
+      ZStack {
+        settingsBackground
+
+        ScrollView {
+          VStack(alignment: .leading, spacing: 34) {
+            header
+
+            LazyVGrid(
+              columns: [
+                GridItem(.flexible(), spacing: 28),
+                GridItem(.flexible(), spacing: 28),
+              ],
+              spacing: 28
+            ) {
+              ForEach(SettingsCategory.allCases) { category in
+                SettingsCategoryTile(category: category)
+              }
+            }
+          }
+          .padding(.top, 72)
+          .padding(.horizontal, 82)
+          .padding(.bottom, 100)
         }
-        .padding(.top, 180)
-        .padding(.horizontal, 82)
-        .padding(.bottom, 100)
+      }
+      .navigationDestination(for: SettingsCategory.self) { category in
+        categoryDetail(category)
       }
     }
     .fullScreenCover(isPresented: $showsDiagnostics) {
       DiagnosticsView().environmentObject(appState)
+    }
+    .fullScreenCover(isPresented: $showsStremioImport) {
+      StremioImportView(
+        existingURLs: appState.preferences.addonManifestURLs,
+        onImport: { urls in
+          appState.updatePreferences { $0.addonManifestURLs = urls }
+        },
+        onClose: { showsStremioImport = false }
+      )
+      .environmentObject(appState)
     }
     .onChange(of: cloudMessage) { _, cloudMessage in
       postQueuedAccessibilityAnnouncement(cloudMessage)
@@ -42,12 +61,80 @@ struct SettingsView: View {
     }
   }
 
+  private var settingsBackground: some View {
+    ZStack {
+      Color(red: 0.025, green: 0.025, blue: 0.035)
+      RadialGradient(
+        colors: [VelyraTheme.primary.opacity(0.13), .clear],
+        center: .topTrailing,
+        startRadius: 20,
+        endRadius: 920
+      )
+    }
+    .ignoresSafeArea()
+  }
+
   private var header: some View {
     VStack(alignment: .leading, spacing: 10) {
       Text("settings.title")
         .font(.system(size: 56, weight: .bold, design: .rounded))
         .foregroundStyle(.white)
       Text("settings.body").font(.title3).foregroundStyle(.white.opacity(0.68))
+    }
+  }
+
+  private func categoryDetail(_ category: SettingsCategory) -> some View {
+    ZStack {
+      settingsBackground
+
+      ScrollView {
+        VStack(alignment: .leading, spacing: 30) {
+          VStack(alignment: .leading, spacing: 10) {
+            Label(LocalizedStringKey(category.titleKey), systemImage: category.systemImage)
+              .font(.system(size: 46, weight: .bold, design: .rounded))
+              .foregroundStyle(.white)
+              .accessibilityAddTraits(.isHeader)
+
+            Text(LocalizedStringKey(category.summaryKey))
+              .font(.title3)
+              .foregroundStyle(.white.opacity(0.62))
+          }
+
+          categoryContent(category)
+        }
+        .padding(.horizontal, 94)
+        .padding(.vertical, 64)
+        .frame(maxWidth: 1_520, alignment: .leading)
+        .frame(maxWidth: .infinity)
+      }
+    }
+    .navigationTitle(LocalizedStringKey(category.titleKey))
+  }
+
+  @ViewBuilder
+  private func categoryContent(_ category: SettingsCategory) -> some View {
+    switch category {
+    case .appearance:
+      appearanceSection
+    case .experience:
+      experienceSection
+    case .playback:
+      smartPlaybackSection
+    case .audioSubtitles:
+      subtitlesSection
+    case .homeSearch:
+      discoverySection
+    case .accountsSync:
+      syncSection
+      TraktSettingsCard(
+        session: appState.traktSession,
+        repository: appState.traktLibraryRepository
+      )
+      stremioSection
+    case .storageDiagnostics:
+      storageSection
+    case .about:
+      aboutSection
     }
   }
 
@@ -235,7 +322,7 @@ struct SettingsView: View {
         index, section in
         HStack(spacing: 18) {
           Toggle(
-            LocalizedStringKey("home.section.\(section.rawValue)"),
+            LocalizedStringKey(section.displayNameKey),
             isOn: Binding(
               get: { !appState.preferences.hiddenHomeSections.contains(section) },
               set: { visible in
@@ -300,6 +387,22 @@ struct SettingsView: View {
         )
         cloudControls
       }
+    }
+  }
+
+  private var stremioSection: some View {
+    SettingsCard(titleKey: "stremio.import.title", systemImage: "puzzlepiece.extension.fill") {
+      Text("stremio.import.settingsBody")
+        .font(.headline)
+        .foregroundStyle(.white.opacity(0.68))
+        .fixedSize(horizontal: false, vertical: true)
+
+      Button {
+        showsStremioImport = true
+      } label: {
+        Label("stremio.import.action", systemImage: "arrow.down.circle")
+      }
+      .buttonStyle(VelyraGlassButtonStyle(prominent: true))
     }
   }
 
@@ -510,7 +613,14 @@ private struct SettingsCard<Content: View>: View {
       content()
     }
     .padding(30)
-    .velyraGlass(cornerRadius: 30)
+    .background(
+      Color(red: 0.09, green: 0.09, blue: 0.11).opacity(0.94),
+      in: RoundedRectangle(cornerRadius: 30, style: .continuous)
+    )
+    .overlay {
+      RoundedRectangle(cornerRadius: 30, style: .continuous)
+        .stroke(.white.opacity(0.1), lineWidth: 1)
+    }
   }
 }
 
@@ -529,6 +639,7 @@ private struct SettingsToggle: View {
       Toggle("", isOn: $isOn).labelsHidden().tint(VelyraTheme.primary)
         .accessibilityLabel(Text(LocalizedStringKey(titleKey)))
     }
+    .frame(minHeight: 84)
   }
 }
 
@@ -546,6 +657,7 @@ private struct SettingsPicker<Value: Hashable & Identifiable>: View {
       }
       .frame(width: 420)
     }
+    .frame(minHeight: 84)
   }
 }
 
@@ -593,6 +705,7 @@ private struct SettingsSlider: View {
       }
       .frame(width: 300)
     }
+    .frame(minHeight: 84)
   }
 
   private func adjustValue(by delta: Double) {

@@ -9,6 +9,7 @@ Velyra keeps public metadata, personal state, playback sources and device prefer
 | Discovery, trending metadata and backdrops, genres, trailer metadata and regional providers | TMDB / provider attribution data | Cache, localisation, policy enforcement and presentation; Velyra does not redistribute trailer or video bytes |
 | Personal history, playback progress, watchlist, ratings, collection and lists | Trakt | Offline queue, optimistic UI and reconciliation |
 | Catalogues, metadata extensions, streams and subtitles | User-installed HTTP/JSON addons | Validation, aggregation, health, priority and deduplication |
+| Stremio addon collection | Official Stremio link v2 and `addonCollectionGet` read endpoint | User-initiated preview and selective manifest import; no collection writes |
 | Theme, language, Home layout and playback preferences | Velyra | Local persistence and private iCloud synchronisation |
 | Onboarding fallback artwork and motion | Velyra | Original art plus native SwiftUI composition and motion |
 | Authentication tokens | Trakt | Device Keychain only |
@@ -37,11 +38,21 @@ The onboarding metadata cache is scoped to language and region:
 - corrupt snapshots are deleted when decoding fails, and expired snapshots are deleted after the seven-day limit; a locale mismatch returns missing for the current request but retains the stored snapshot for its matching language/region; an unconfigured credential or an offline refresh can still use a fresh matching snapshot or eligible stale snapshot, but none of these states ever blocks onboarding;
 - metadata alone is not displayed: remote image pixels are published to the onboarding view only after the corresponding backdrop prefetch succeeds.
 
-When a refresh is needed, daily series and movie requests fail independently. Successful results are converted only when they have a usable backdrop, then series and movie candidates are interleaved. The repository makes a deterministic two-item selection from that combined list using the seed `UTC day|language|region`. A failure of one endpoint can therefore still supply decoration from the other. If refresh yields no usable candidates, the repository returns an eligible stale snapshot when available; otherwise it returns no remote metadata.
+When a refresh is needed, daily series and movie requests fail independently. Successful results are converted only when they have a usable backdrop, then series and movie candidates are interleaved. The repository makes a deterministic selection from that combined list using the seed `UTC day|language|region`; the view publishes at most the first successfully prefetched item. A failure of one endpoint can therefore still supply decoration from the other. If refresh yields no usable candidates, the repository returns an eligible stale snapshot when available; otherwise it returns no remote metadata.
 
 Fresh or stale metadata during an unconfigured/offline run may still produce a remote layer when the corresponding image pixels are available to the prefetch path from the image cache. If metadata is unavailable, prefetch fails, or pixels are not cached, only the bundled original fallback is shown.
 
 Decorative motion follows a fallback-first accessibility policy. Reduce Motion removes drifting and animated transitions and shows at most one static remote backdrop over the original fallback. Reduce Transparency strengthens the central opaque treatment used to protect legibility. If remote content is absent or rejected, the original art remains the complete experience.
+
+## Stremio addon import boundary
+
+Velyra requests a temporary code from
+`https://link.stremio.com/api/v2/create`, reads authorization through the
+matching v2 read endpoint, and fetches only `addonCollectionGet`. The temporary
+auth key stays in memory, is cleared before logout is attempted, and is never
+written to preferences, iCloud, diagnostics or logs. Imported HTTPS manifest
+URLs are appended to existing Velyra addons after preview and validation.
+Velyra has no Stremio collection-write API.
 
 ## Trailer provider policy
 

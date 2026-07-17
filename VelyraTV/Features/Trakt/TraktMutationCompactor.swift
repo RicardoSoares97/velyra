@@ -33,7 +33,9 @@ extension TraktPendingMutation {
       if kind == .addHistory {
         return request?.singleMediaStableID.map { "history:add:\($0)" }
       }
-      return request?.ids.map { "history:remove:\($0.sorted().map(String.init).joined(separator: ","))" }
+      return request?.ids.map {
+        "history:remove:\($0.sorted().map(String.init).joined(separator: ","))"
+      }
     case .playback:
       return playbackID.map { "playback:\($0)" }
     case .scrobble:
